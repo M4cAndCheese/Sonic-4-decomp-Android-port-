@@ -6,7 +6,7 @@ using Microsoft.Xna.Framework;
 namespace Sonic4Android
 {
     [Activity(
-        Label = "Sonic 4 Ep. I",
+        Label = "Sonic 4 ep 1",
         MainLauncher = true,
         Theme = "@android:style/Theme.NoTitleBar.Fullscreen",
         ScreenOrientation = ScreenOrientation.SensorLandscape,

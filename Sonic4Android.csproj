@@ -5,6 +5,7 @@
     <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
     <ApplicationId>com.sonic4ep1.android</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationTitle>Sonic 4 ep 1</ApplicationTitle>
     <ApplicationDisplayVersion>1.2.0</ApplicationDisplayVersion>
     <AssemblyName>Sonic4Android</AssemblyName>
     <RootNamespace>Sonic4Android</RootNamespace>

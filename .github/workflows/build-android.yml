@@ -1,0 +1,45 @@
+name: Build Android APK
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install Android workload
+        run: |
+          dotnet workload install android
+          sdkmanager --list_installed || true
+
+      - name: Restore
+        run: dotnet restore Sonic4Android.csproj
+
+      - name: Build APK
+        run: dotnet build Sonic4Android.csproj -c Release -f net8.0-android -p:AndroidPackageFormat=apk
+
+      - name: Collect APK
+        run: |
+          mkdir -p artifacts
+          find bin -name '*-Signed.apk' -exec cp {} artifacts/ \; 
+          find bin -name '*.apk' -exec cp {} artifacts/ \; 
+          ls -la artifacts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sonic-4-ep-1-apk
+          path: artifacts/*.apk
+          if-no-files-found: error
