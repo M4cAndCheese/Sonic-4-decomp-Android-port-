@@ -180589,8 +180589,8 @@ public class AppMain
 
 	private static void screen2real(ref float X, ref float Y)
 	{
-		Y *= 1.05f;
-		Y += 16f;
+		// Las coordenadas ya llegan en el espacio 480x288 que se dibuja (GetGameTouches).
+		// No se transforman otra vez.
 	}
 
 	private static int amFindTouchIndex(int id)

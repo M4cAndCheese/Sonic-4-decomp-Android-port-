@@ -202,14 +202,14 @@ public class Sonic4Ep1 : Game
         base.Draw(gameTime);
     }
 
-    // Área donde se dibuja el juego: proporción 480:288 centrada, sin estirar y sin recortar.
-    // Se escala para que quepa entero; en pantallas ultrawide sobran bandas negras a los lados.
+    // Área donde se dibuja el juego. Llena toda la pantalla sin bandas negras:
+    // el sobrante se recorta centrado en vez de estirar la imagen.
     public Rectangle GetGameRect()
     {
         Viewport vp = GraphicsDevice.Viewport;
-        float scale = Math.Min(vp.Width / (float)GAME_W, vp.Height / (float)GAME_H);
-        int w = Math.Max(1, (int)(GAME_W * scale));
-        int h = Math.Max(1, (int)(GAME_H * scale));
+        float scale = Math.Max(vp.Width / (float)GAME_W, vp.Height / (float)GAME_H);
+        int w = (int)Math.Ceiling(GAME_W * scale);
+        int h = (int)Math.Ceiling(GAME_H * scale);
         gameRect = new Rectangle((vp.Width - w) / 2, (vp.Height - h) / 2, w, h);
         return gameRect;
     }

@@ -6,6 +6,7 @@ using Android.Content.PM;
 using Android.OS;
 using Android.Runtime;
 using Android.Views;
+using Android.Widget;
 using Microsoft.Xna.Framework;
 
 namespace Sonic4Android
