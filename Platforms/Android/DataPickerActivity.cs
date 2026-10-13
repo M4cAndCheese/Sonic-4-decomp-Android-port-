@@ -13,6 +13,7 @@ namespace Sonic4Android
     // automáticamente cuando el juego no tiene datos.
     [Activity(
         Label = "Elegir datos (carpeta)",
+        Icon = "@mipmap/ic_launcher",
         Theme = "@android:style/Theme.DeviceDefault.Light.DarkActionBar",
         Exported = true)]
     [IntentFilter(new[] { Intent.ActionMain }, Categories = new[] { Intent.CategoryLauncher })]
@@ -25,10 +26,11 @@ namespace Sonic4Android
             base.OnCreate(savedInstanceState);
             if (savedInstanceState == null)
             {
-                Toast.MakeText(this, "Elige la carpeta sonic4-data en Descargas", ToastLength.Long).Show();
+                Toast.MakeText(this, "Entra en la carpeta con los datos (la que contiene Kootenay.xnb) y pulsa \"Usar esta carpeta\"", ToastLength.Long).Show();
+                // Sin INITIAL_URI: algunas ROMs (MIUI/HyperOS) marcan Descargas o carpetas creadas
+                // por la app como "no usables" y no muestran las subcarpetas.
                 var intent = new Intent(Intent.ActionOpenDocumentTree);
-                intent.PutExtra("android.provider.extra.INITIAL_URI",
-                    Android.Net.Uri.Parse("content://com.android.externalstorage.documents/document/primary%3ADownload"));
+                intent.AddFlags(ActivityFlags.GrantReadUriPermission | ActivityFlags.GrantPersistableUriPermission);
                 StartActivityForResult(intent, RequestCarpeta);
             }
         }
