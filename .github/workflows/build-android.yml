@@ -29,7 +29,43 @@ jobs:
       - name: Restore
         run: dotnet restore Sonic4Android.csproj
 
-      - name: Build APK
+      - name: Preparar clave de firma (release)
+        id: keys
+        env:
+          PEM: ${{ secrets.ANDROID_SIGNING_PEM }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$PEM" ] || [ -z "$KS_PASS" ]; then
+            echo "::warning::Sin secretos ANDROID_SIGNING_PEM / ANDROID_KEYSTORE_PASSWORD: se firma con la clave de depuración"
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          printf '%s\n' "$PEM" | tr -d '\r' > "$RUNNER_TEMP/bundle.pem"
+          awk '/BEGIN PRIVATE KEY/,/END PRIVATE KEY/' "$RUNNER_TEMP/bundle.pem" > "$RUNNER_TEMP/key.pem"
+          awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/' "$RUNNER_TEMP/bundle.pem" > "$RUNNER_TEMP/cert.pem"
+          openssl pkcs12 -export \
+            -inkey "$RUNNER_TEMP/key.pem" \
+            -in "$RUNNER_TEMP/cert.pem" \
+            -name sonic4 \
+            -out "$RUNNER_TEMP/release.p12" \
+            -passout env:KS_PASS
+          echo "has_key=true" >> "$GITHUB_OUTPUT"
+
+      - name: Build APK (release)
+        if: steps.keys.outputs.has_key == 'true'
+        env:
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          dotnet build Sonic4Android.csproj -c Release -f net10.0-android \
+            -p:AndroidPackageFormat=apk \
+            -p:AndroidKeyStore=true \
+            -p:AndroidSigningKeyStore="$RUNNER_TEMP/release.p12" \
+            -p:AndroidSigningStorePass="$KS_PASS" \
+            -p:AndroidSigningKeyAlias=sonic4 \
+            -p:AndroidSigningKeyPass="$KS_PASS"
+
+      - name: Build APK (depuración, sin secretos)
+        if: steps.keys.outputs.has_key != 'true'
         run: dotnet build Sonic4Android.csproj -c Release -f net10.0-android -p:AndroidPackageFormat=apk
 
       - name: Collect APK
@@ -40,14 +76,20 @@ jobs:
           cp "$SIGNED" artifacts/sonic-4-ep-1.apk
           ls -la artifacts
 
-      - name: Verificar APK (integridad y firma)
+      - name: Verificar APK (integridad, alineación y firma)
+        id: verify
         run: |
           APK=artifacts/sonic-4-ep-1.apk
           ls -l "$APK"
-          sha256sum "$APK"
           unzip -tq "$APK"
-          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort | tail -n 1)
-          "$APKSIGNER" verify --verbose --print-certs "$APK"
+          BT=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)
+          "$BT/zipalign" -c -P 16 -v 4 "$APK"
+          "$BT/apksigner" verify --verbose --print-certs "$APK"
+          SHA=$(sha256sum "$APK" | cut -d' ' -f1)
+          SIZE=$(stat -c%s "$APK")
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "size=$SIZE" >> "$GITHUB_OUTPUT"
+          echo "SHA-256: $SHA"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -61,5 +103,10 @@ jobs:
         with:
           tag_name: build-${{ github.run_number }}
           name: Sonic 4 ep 1 build ${{ github.run_number }}
+          body: |
+            APK: sonic-4-ep-1.apk
+            Firma: ${{ steps.keys.outputs.has_key == 'true' && 'release (propia)' || 'depuración (no actualizable con builds de release)' }}
+            Tamaño: ${{ steps.verify.outputs.size }} bytes
+            SHA-256: ${{ steps.verify.outputs.sha }}
           files: artifacts/sonic-4-ep-1.apk
           fail_on_unmatched_files: true

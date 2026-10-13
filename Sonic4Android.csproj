@@ -3,6 +3,8 @@
     <TargetFramework>net10.0-android</TargetFramework>
     <OutputType>Exe</OutputType>
     <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+    <AndroidTargetSdkVersion>36</AndroidTargetSdkVersion>
+    <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
     <ApplicationId>com.sonic4ep1.android</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationTitle>Sonic 4 ep 1</ApplicationTitle>
@@ -17,12 +19,13 @@
     <NoWarn>$(NoWarn);CS0168;CS0219;CS0414;CS0649;CS0169;CS0108;CS0114;CS0162;CS0618;CS1591</NoWarn>
     <AndroidUseAapt2>true</AndroidUseAapt2>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <AndroidPackageAlignment>16</AndroidPackageAlignment>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MonoGame.Framework.Android" Version="3.8.2.1105" />
   </ItemGroup>
   <ItemGroup>
-    <AndroidAsset Include="Content/**/*" />
+    <AndroidAsset Include="Content/**/*" Exclude="Content/README.md" />
   </ItemGroup>
 </Project>
