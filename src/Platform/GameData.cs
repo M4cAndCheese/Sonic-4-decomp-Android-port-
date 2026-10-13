@@ -30,7 +30,14 @@ public static class GameData
         rel = rel.TrimStart('/');
         // ContentManager.Load pide los assets sin extensión ("Kootenay"): el archivo es "Kootenay.xnb".
         if (!Path.HasExtension(rel)) rel += ".xnb";
-        return TitleContainer.OpenStream("Content/" + rel);
+        // Los streams de assets de Android no permiten Length ni Seek; se copian a memoria.
+        using (Stream src = TitleContainer.OpenStream("Content/" + rel))
+        {
+            var ms = new MemoryStream();
+            src.CopyTo(ms);
+            ms.Position = 0;
+            return ms;
+        }
     }
 }
 
