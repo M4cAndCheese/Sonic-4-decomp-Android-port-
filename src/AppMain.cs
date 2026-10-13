@@ -10027,7 +10027,7 @@ public class AppMain
 				return 0;
 			}
 			int result = 0;
-			using (Stream stream = TitleContainer.OpenStream("Content\\SOUND\\" + fileName + ".wav"))
+			using (Stream stream = GameData.OpenStream("Content\\SOUND\\" + fileName + ".wav"))
 			{
 				using (BinaryReader binaryReader = new BinaryReader(stream))
 				{
@@ -10160,7 +10160,7 @@ public class AppMain
 						m_songBGM = _GetPreloadedBGM(sOUND_TABLE.filename[0]);
 						if (m_songBGM == null)
 						{
-							m_songBGM = Sonic4Ep1.pInstance.Content.Load<Song>("Sound/" + sOUND_TABLE.filename[0]);
+							m_songBGM = Sonic4Ep1.pInstance.GameContent.Load<Song>("Sound/" + sOUND_TABLE.filename[0]);
 							bgmPreloadedList.Add(sOUND_TABLE.filename[0], m_songBGM);
 						}
 						m_ActiveSong = se_name;
@@ -78206,7 +78206,7 @@ public class AppMain
 		for (int i = 0; i < array.Length; i++)
 		{
 			SOUND_TABLE sOUND_TABLE = sound_bgm_list[array[i]];
-			Song value = Sonic4Ep1.pInstance.Content.Load<Song>("Sound/" + sOUND_TABLE.filename[0]);
+			Song value = Sonic4Ep1.pInstance.GameContent.Load<Song>("Sound/" + sOUND_TABLE.filename[0]);
 			bgmPreloadedList.Add(sOUND_TABLE.filename[0], value);
 		}
 		return true;
@@ -78275,7 +78275,7 @@ public class AppMain
 
 	private static void fillSoundTable(string filename, Dictionary<string, SOUND_TABLE> list)
 	{
-		using (Stream stream = TitleContainer.OpenStream("Content\\SOUND\\" + filename))
+		using (Stream stream = GameData.OpenStream("Content\\SOUND\\" + filename))
 		{
 			using (StreamReader streamReader = new StreamReader(stream))
 			{
@@ -114742,7 +114742,7 @@ public class AppMain
 		AMS_FS value = ams_fsList.First.Value;
 		if (value.stream == null)
 		{
-			value.stream = TitleContainer.OpenStream("Content\\" + value.file_name);
+			value.stream = GameData.OpenStream("Content\\" + value.file_name);
 			value.data = new byte[value.stream.Length];
 			return;
 		}
@@ -114811,7 +114811,7 @@ public class AppMain
 	public static int amFsRead(string file_name, out byte[] buf)
 	{
 		int num = 0;
-		using (Stream stream = TitleContainer.OpenStream(file_name))
+		using (Stream stream = GameData.OpenStream(file_name))
 		{
 			num = (int)stream.Length;
 			buf = new byte[num];
@@ -114823,7 +114823,7 @@ public class AppMain
 	public static byte[] amFsRead(string file_name)
 	{
 		byte[] array = null;
-		using (Stream stream = TitleContainer.OpenStream("Content\\" + file_name))
+		using (Stream stream = GameData.OpenStream("Content\\" + file_name))
 		{
 			int num = (int)stream.Length;
 			array = new byte[num];
@@ -146183,7 +146183,7 @@ public class AppMain
 	public static AMS_AME_HEADER readAMEfile(string filename)
 	{
 		filename = string.Format("Content/{0}", filename);
-		BinaryReader binaryReader = new BinaryReader(TitleContainer.OpenStream(filename));
+		BinaryReader binaryReader = new BinaryReader(GameData.OpenStream(filename));
 		AMS_AME_HEADER result = readAMEfile(binaryReader);
 		binaryReader.Dispose();
 		return result;
@@ -180778,7 +180778,7 @@ public class AppMain
 	public static A2S_AMA_HEADER readAMAFile(string name)
 	{
 		A2S_AMA_HEADER a2S_AMA_HEADER = null;
-		using (Stream input = TitleContainer.OpenStream("Content\\" + name))
+		using (Stream input = GameData.OpenStream("Content\\" + name))
 		{
 			using (BinaryReader br = new BinaryReader(input))
 			{

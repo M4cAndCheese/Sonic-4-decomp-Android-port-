@@ -37,6 +37,8 @@ public class Sonic4Ep1 : Game
 
     public SpriteBatch spriteBatch;
 
+    public ContentManager GameContent;
+
     public const int GAME_W = 480;
     public const int GAME_H = 288;
     private RenderTarget2D gameTarget;
@@ -53,6 +55,7 @@ public class Sonic4Ep1 : Game
     public Sonic4Ep1()
     {
         pInstance = this;
+        GameContent = new GameDataContent(Services);
         graphics = new GraphicsDeviceManager(this);
         graphics.PreferredBackBufferWidth = 480;
         graphics.PreferredBackBufferHeight = 288;
@@ -91,10 +94,10 @@ public class Sonic4Ep1 : Game
         //IL_00ab: Expected O, but got Unknown
         spriteBatch = new SpriteBatch(base.GraphicsDevice);
         gameTarget = new RenderTarget2D(base.GraphicsDevice, GAME_W, GAME_H, false, SurfaceFormat.Color, DepthFormat.None);
-        fntKootenay = base.Content.Load<SpriteFont>("Kootenay");
-        fnts[0] = base.Content.Load<SpriteFont>("small");
-        fnts[1] = base.Content.Load<SpriteFont>("medium");
-        fnts[2] = base.Content.Load<SpriteFont>("large");
+        fntKootenay = GameContent.Load<SpriteFont>("Kootenay");
+        fnts[0] = GameContent.Load<SpriteFont>("small");
+        fnts[1] = GameContent.Load<SpriteFont>("medium");
+        fnts[2] = GameContent.Load<SpriteFont>("large");
         try
         {
             appMain = new AppMain(this, graphics, base.GraphicsDevice);

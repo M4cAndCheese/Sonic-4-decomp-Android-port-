@@ -1,5 +1,6 @@
 using System;
 using Android.App;
+using Android.Content;
 using Android.Content.PM;
 using Android.OS;
 using Android.Runtime;
@@ -18,16 +19,38 @@ namespace Sonic4Android
         Exported = true)]
     public class MainActivity : AndroidGameActivity
     {
+        private const int RequestDatos = 1;
         private Sonic4Ep1 _game;
 
         protected override void OnCreate(Bundle bundle)
         {
             base.OnCreate(bundle);
-
-            // Captura excepciones que ocurren fuera de OnCreate (por ejemplo, al cargar contenido
-            // en el hilo del juego) y las muestra en pantalla en vez de cerrar la app en silencio.
             AndroidEnvironment.UnhandledExceptionRaiser += OnUnhandledException;
 
+            if (!GameData.Ready)
+            {
+                // Sin datos: pedir el zip antes de arrancar el juego.
+                StartActivityForResult(new Intent(this, typeof(DataPickerActivity)), RequestDatos);
+                return;
+            }
+            StartGame();
+        }
+
+        protected override void OnActivityResult(int requestCode, Result resultCode, Intent data)
+        {
+            base.OnActivityResult(requestCode, resultCode, data);
+            if (requestCode == RequestDatos && GameData.Ready)
+            {
+                StartGame();
+            }
+            else if (requestCode == RequestDatos)
+            {
+                Finish();
+            }
+        }
+
+        private void StartGame()
+        {
             try
             {
                 _game = new Sonic4Ep1();

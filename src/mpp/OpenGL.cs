@@ -4254,7 +4254,7 @@ public sealed class OpenGL
 
     public static void mppglTexImage2D(string textureName)
     {
-        using (Stream stream = TitleContainer.OpenStream(Path.Combine("Content", textureName + ".png")))
+        using (Stream stream = GameData.OpenStream(Path.Combine("Content", textureName + ".png")))
         {
             m_textures[m_textureUnits[m_activeTextureUnit].BoundTexture] = Texture2D.FromStream(m_graphicsDevice, stream);
             m_textures[m_textureUnits[m_activeTextureUnit].BoundTexture].Tag = true;
