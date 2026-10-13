@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.sonic4ep1.android">
+  <application android:label="Sonic 4 Ep. I" android:icon="@mipmap/ic_launcher" android:theme="@android:style/Theme.NoTitleBar.Fullscreen" android:allowBackup="true">
+  </application>
+  <uses-permission android:name="android.permission.WAKE_LOCK" />
+</manifest>
