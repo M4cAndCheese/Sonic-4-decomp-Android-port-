@@ -1,5 +1,4 @@
-// Datos del juego: carpeta Sonic4-data en la raíz del almacenamiento del dispositivo.
-// Si un archivo no está ahí, se usa el de los assets de la APK.
+// Datos del juego: todos los archivos van empaquetados dentro del APK (carpeta Content/).
 using System;
 using System.IO;
 using Microsoft.Xna.Framework;
@@ -7,20 +6,11 @@ using Microsoft.Xna.Framework.Content;
 
 public static class GameData
 {
-    public const string NombreCarpeta = "Sonic4-data";
-
-    // Carpeta de datos dentro de la app (no necesita permisos de almacenamiento):
-    // /storage/emulated/0/Android/data/com.sonic4ep1.android/files/Sonic4-data
-    public static string Root =>
-        Path.Combine(Android.App.Application.Context.GetExternalFilesDir(null).AbsolutePath, NombreCarpeta);
-
-    // Marca de datos completos: el archivo que siempre carga el juego al arrancar.
-    // Datos listos si están en la carpeta de la app o empaquetados en el APK (Content/).
+    // Datos listos si Kootenay.xnb está dentro del APK.
     public static bool Ready
     {
         get
         {
-            if (File.Exists(Path.Combine(Root, "Kootenay.xnb"))) return true;
             try
             {
                 using (TitleContainer.OpenStream("Content/Kootenay.xnb")) return true;
@@ -32,53 +22,17 @@ public static class GameData
         }
     }
 
+    // Abre un asset del juego desde el APK, p. ej. "Content\SOUND\x.wav" -> "Content/SOUND/x.wav".
     public static Stream OpenStream(string assetName)
     {
         string rel = assetName.Replace('\\', '/');
         if (rel.StartsWith("Content/")) rel = rel.Substring(8);
         rel = rel.TrimStart('/');
-
-        if (rel.Length > 0 && !rel.Contains(".."))
-        {
-            string p = Path.Combine(Root, rel);
-            if (File.Exists(p)) return File.OpenRead(p);
-        }
-        // Assets del APK: ruta relativa con barras normales, p. ej. "Content/SOUND/x.wav".
         return TitleContainer.OpenStream("Content/" + rel);
-    }
-
-    // Instala los datos copiados a `staging` como la carpeta Sonic4-data.
-    // Acepta la carpeta elegida directamente (con Kootenay.xnb dentro) o una que contenga Sonic4-data.
-    public static void Install(string staging)
-    {
-        string origen = staging;
-        if (!File.Exists(Path.Combine(origen, "Kootenay.xnb")))
-        {
-            string anidada = Path.Combine(staging, NombreCarpeta);
-            if (File.Exists(Path.Combine(anidada, "Kootenay.xnb"))) origen = anidada;
-            else throw new InvalidOperationException("La carpeta elegida no contiene Kootenay.xnb");
-        }
-
-        string viejo = Root + "_old";
-        if (Directory.Exists(viejo)) Directory.Delete(viejo, true);
-        if (Directory.Exists(Root)) Directory.Move(Root, viejo);
-        try
-        {
-            Directory.Move(origen, Root);
-        }
-        catch
-        {
-            // Si falla, se restaura la copia anterior.
-            if (Directory.Exists(viejo) && !Directory.Exists(Root)) Directory.Move(viejo, Root);
-            throw;
-        }
-
-        if (Directory.Exists(viejo)) Directory.Delete(viejo, true);
-        if (Directory.Exists(staging)) Directory.Delete(staging, true);
     }
 }
 
-// ContentManager que lee desde Sonic4-data en vez de solo desde los assets de la APK.
+// ContentManager que lee los assets desde el APK.
 public class GameDataContent : ContentManager
 {
     public GameDataContent(IServiceProvider services) : base(services, "Content") { }
