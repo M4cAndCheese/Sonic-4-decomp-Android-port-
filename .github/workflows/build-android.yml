@@ -5,6 +5,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,8 +24,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Install Android workload
-        run: |
-          dotnet workload install android
+        run: dotnet workload install android
 
       - name: Restore
         run: dotnet restore Sonic4Android.csproj
@@ -33,11 +35,22 @@ jobs:
       - name: Collect APK
         run: |
           mkdir -p artifacts
-          find bin -name '*-Signed.apk' -exec cp {} artifacts/ \;
+          SIGNED=$(find bin -name '*-Signed.apk' | head -n 1)
+          test -n "$SIGNED"
+          cp "$SIGNED" artifacts/sonic-4-ep-1.apk
           ls -la artifacts
 
       - uses: actions/upload-artifact@v4
         with:
           name: sonic-4-ep-1-apk
-          path: artifacts/*-Signed.apk
+          path: artifacts/sonic-4-ep-1.apk
           if-no-files-found: error
+
+      - name: Publish release (APK descargable sin zip)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Sonic 4 ep 1 build ${{ github.run_number }}
+          files: artifacts/sonic-4-ep-1.apk
+          fail_on_unmatched_files: true
