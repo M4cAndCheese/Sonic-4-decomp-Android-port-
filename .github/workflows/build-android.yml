@@ -23,7 +23,6 @@ jobs:
       - name: Install Android workload
         run: |
           dotnet workload install android
-          sdkmanager --list_installed || true
 
       - name: Restore
         run: dotnet restore Sonic4Android.csproj
@@ -34,8 +33,8 @@ jobs:
       - name: Collect APK
         run: |
           mkdir -p artifacts
-          find bin -name '*-Signed.apk' -exec cp {} artifacts/ \; 
-          find bin -name '*.apk' -exec cp {} artifacts/ \; 
+          find bin -name '*-Signed.apk' -exec cp {} artifacts/ \;
+          find bin -name '*.apk' -exec cp {} artifacts/ \;
           ls -la artifacts
 
       - uses: actions/upload-artifact@v4

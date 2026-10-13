@@ -17,12 +17,12 @@
     <NoWarn>$(NoWarn);CS0168;CS0219;CS0414;CS0649;CS0169;CS0108;CS0114;CS0162;CS0618;CS1591</NoWarn>
     <AndroidUseAapt2>true</AndroidUseAapt2>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MonoGame.Framework.Android" Version="3.8.2.1105" />
   </ItemGroup>
   <ItemGroup>
-    <AndroidResource Include="Platforms/Android/Resources/**/*" />
     <AndroidAsset Include="Content/**/*" />
   </ItemGroup>
 </Project>
