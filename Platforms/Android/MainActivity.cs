@@ -1,8 +1,9 @@
 using System;
-using Android.Views;
 using Android.App;
 using Android.Content.PM;
 using Android.OS;
+using Android.Runtime;
+using Android.Views;
 using Microsoft.Xna.Framework;
 
 namespace Sonic4Android
@@ -22,6 +23,11 @@ namespace Sonic4Android
         protected override void OnCreate(Bundle bundle)
         {
             base.OnCreate(bundle);
+
+            // Captura excepciones que ocurren fuera de OnCreate (por ejemplo, al cargar contenido
+            // en el hilo del juego) y las muestra en pantalla en vez de cerrar la app en silencio.
+            AndroidEnvironment.UnhandledExceptionRaiser += OnUnhandledException;
+
             try
             {
                 _game = new Sonic4Ep1();
@@ -30,14 +36,27 @@ namespace Sonic4Android
             }
             catch (Exception ex)
             {
-                // Muestra el error en pantalla en lugar de cerrar la app en silencio.
+                ShowError(ex);
+            }
+        }
+
+        private void OnUnhandledException(object sender, RaiseThrowableEventArgs e)
+        {
+            e.Handled = true;
+            ShowError(e.Exception);
+        }
+
+        private void ShowError(Exception ex)
+        {
+            RunOnUiThread(() =>
+            {
                 new AlertDialog.Builder(this)
-                    .SetTitle("Error al iniciar")
+                    .SetTitle("Error de Sonic 4 ep 1")
                     .SetMessage(ex.ToString())
                     .SetPositiveButton("Cerrar", (s, e) => Finish())
                     .SetCancelable(false)
                     .Show();
-            }
+            });
         }
     }
 }
