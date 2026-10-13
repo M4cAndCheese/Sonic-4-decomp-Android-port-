@@ -28,6 +28,8 @@ public static class GameData
         string rel = assetName.Replace('\\', '/');
         if (rel.StartsWith("Content/")) rel = rel.Substring(8);
         rel = rel.TrimStart('/');
+        // ContentManager.Load pide los assets sin extensión ("Kootenay"): el archivo es "Kootenay.xnb".
+        if (!Path.HasExtension(rel)) rel += ".xnb";
         return TitleContainer.OpenStream("Content/" + rel);
     }
 }
