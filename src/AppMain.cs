@@ -180535,7 +180535,7 @@ public class AppMain
 
 	public static void onTouchEvents()
 	{
-		TouchCollection state = TouchPanel.GetState();
+		TouchCollection state = Sonic4Ep1.pInstance.GetGameTouches();
 		for (int i = 0; i < 4; i++)
 		{
 			touchMarked[i] = false;

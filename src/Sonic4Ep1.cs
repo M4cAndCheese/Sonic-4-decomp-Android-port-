@@ -1,4 +1,4 @@
-﻿// Decompiled with JetBrains decompiler
+// Decompiled with JetBrains decompiler
 // Type: Sonic4Ep1
 // Assembly: Sonic4 ep I, Version=1.2.0.0, Culture=neutral, PublicKeyToken=null
 // MVID: 093CE2FC-33E2-4332-B0FE-1EA1E44D3AE7
@@ -8,6 +8,8 @@ using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using Microsoft.Xna.Framework.Input.Touch;
+using System.Collections.Generic;
 using Microsoft.Xna.Framework.Media;
 using mpp;
 
@@ -34,6 +36,11 @@ public class Sonic4Ep1 : Game
     private AppMain appMain;
 
     public SpriteBatch spriteBatch;
+
+    public const int GAME_W = 480;
+    public const int GAME_H = 288;
+    private RenderTarget2D gameTarget;
+    private Rectangle gameRect;
 
     protected float deviceMusicVolume;
 
@@ -83,6 +90,7 @@ public class Sonic4Ep1 : Game
         //IL_00a1: Unknown result type (might be due to invalid IL or missing references)
         //IL_00ab: Expected O, but got Unknown
         spriteBatch = new SpriteBatch(base.GraphicsDevice);
+        gameTarget = new RenderTarget2D(base.GraphicsDevice, GAME_W, GAME_H, false, SurfaceFormat.Color, DepthFormat.None);
         fntKootenay = base.Content.Load<SpriteFont>("Kootenay");
         fnts[0] = base.Content.Load<SpriteFont>("small");
         fnts[1] = base.Content.Load<SpriteFont>("medium");
@@ -172,11 +180,48 @@ public class Sonic4Ep1 : Game
         inputDataRead = true;
         OpenGL.drawPrimitives_Count = 0;
         OpenGL.drawVertexBuffer_Count = 0;
+        if (gameTarget != null)
+        {
+            GraphicsDevice.SetRenderTarget(gameTarget);
+        }
         appMain.AppMainLoop();
-        spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Opaque);
-        spriteBatch.End();
+        GraphicsDevice.SetRenderTarget(null);
+        GraphicsDevice.Clear(Color.Black);
+        if (gameTarget != null)
+        {
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.PointClamp, null, null);
+            spriteBatch.Draw(gameTarget, GetGameRect(), Color.White);
+            spriteBatch.End();
+        }
         LiveFeature.getInstance().ShowOverride();
         Upsell.drawUpsellScreen();
         base.Draw(gameTime);
+    }
+
+    // Área donde se dibuja el juego: proporción 480:288 centrada, sin estirar y sin bordes.
+    // Se escala para cubrir toda la pantalla; lo que sobra se recorta por igual en los bordes.
+    public Rectangle GetGameRect()
+    {
+        Viewport vp = GraphicsDevice.Viewport;
+        float scale = Math.Max(vp.Width / (float)GAME_W, vp.Height / (float)GAME_H);
+        int w = (int)(GAME_W * scale);
+        int h = (int)(GAME_H * scale);
+        gameRect = new Rectangle((vp.Width - w) / 2, (vp.Height - h) / 2, w, h);
+        return gameRect;
+    }
+
+    // Toques en coordenadas de pantalla -> coordenadas del juego (480x288).
+    public TouchCollection GetGameTouches()
+    {
+        Rectangle r = GetGameRect();
+        float sx = GAME_W / (float)r.Width;
+        float sy = GAME_H / (float)r.Height;
+        List<TouchLocation> list = new List<TouchLocation>();
+        foreach (TouchLocation t in TouchPanel.GetState())
+        {
+            Vector2 p = new Vector2((t.Position.X - r.X) * sx, (t.Position.Y - r.Y) * sy);
+            list.Add(new TouchLocation(t.Id, t.State, p));
+        }
+        return new TouchCollection(list);
     }
 }
