@@ -40,6 +40,15 @@ jobs:
           cp "$SIGNED" artifacts/sonic-4-ep-1.apk
           ls -la artifacts
 
+      - name: Verificar APK (integridad y firma)
+        run: |
+          APK=artifacts/sonic-4-ep-1.apk
+          ls -l "$APK"
+          sha256sum "$APK"
+          unzip -tq "$APK"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort | tail -n 1)
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+
       - uses: actions/upload-artifact@v4
         with:
           name: sonic-4-ep-1-apk
