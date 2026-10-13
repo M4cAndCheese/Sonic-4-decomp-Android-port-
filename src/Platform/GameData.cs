@@ -1,8 +1,7 @@
-// Datos del juego desde un zip elegido por el usuario.
+// Datos del juego elegidos por el usuario (carpeta copiada a almacenamiento privado).
 // Si un archivo no está en la carpeta de datos, se usa el de los assets de la APK.
 using System;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
@@ -35,38 +34,19 @@ public static class GameData
         return TitleContainer.OpenStream(assetName);
     }
 
-    // Extrae el zip en una carpeta temporal y ubica la carpeta que contiene Kootenay.xnb.
-    public static void ExtractZip(Stream zipStream)
+    // Instala los datos desde una carpeta de preparación: localiza Kootenay.xnb y mueve su carpeta a Root.
+    public static void Install(string staging)
     {
-        string tmp = Root + "_tmp";
-        if (Directory.Exists(tmp)) Directory.Delete(tmp, true);
-        Directory.CreateDirectory(tmp);
-        string tmpFull = Path.GetFullPath(tmp) + Path.DirectorySeparatorChar;
-
-        using (ZipArchive zip = new ZipArchive(zipStream, ZipArchiveMode.Read))
-        {
-            foreach (ZipArchiveEntry entry in zip.Entries)
-            {
-                if (string.IsNullOrEmpty(entry.Name)) continue;
-                string dest = Path.GetFullPath(Path.Combine(tmp, entry.FullName.Replace('\\', '/')));
-                // Evita rutas que salgan de la carpeta de destino (zip slip).
-                if (!dest.StartsWith(tmpFull, StringComparison.Ordinal)) continue;
-                Directory.CreateDirectory(Path.GetDirectoryName(dest));
-                entry.ExtractToFile(dest, true);
-            }
-        }
-
-        string marca = Directory.GetFiles(tmp, "Kootenay.xnb", SearchOption.AllDirectories).FirstOrDefault();
+        string marca = Directory.GetFiles(staging, "Kootenay.xnb", SearchOption.AllDirectories).FirstOrDefault();
         if (marca == null)
         {
-            Directory.Delete(tmp, true);
-            throw new InvalidDataException("El zip no contiene Kootenay.xnb. Elige el zip con los datos del juego.");
+            Directory.Delete(staging, true);
+            throw new InvalidDataException("La carpeta no contiene Kootenay.xnb. Elige la carpeta donde descomprimiste los datos.");
         }
-
         string contenido = Path.GetDirectoryName(marca);
         if (Directory.Exists(Root)) Directory.Delete(Root, true);
         Directory.Move(contenido, Root);
-        if (Directory.Exists(tmp)) Directory.Delete(tmp, true);
+        if (Directory.Exists(staging)) Directory.Delete(staging, true);
     }
 }
 
@@ -79,21 +59,4 @@ public class GameDataContent : ContentManager
     {
         return GameData.OpenStream(assetName);
     }
-
-    // Instala los datos desde una carpeta de preparación: localiza Kootenay.xnb y mueve su carpeta a Root.
-    public static void Install(string staging)
-    {
-        string marca = Directory.GetFiles(staging, "Kootenay.xnb", SearchOption.AllDirectories).FirstOrDefault();
-        if (marca == null)
-        {
-            Directory.Delete(staging, true);
-            throw new InvalidDataException("La carpeta no contiene Kootenay.xnb. Elige la carpeta donde descomprimiste main.obb.");
-        }
-        string contenido = Path.GetDirectoryName(marca);
-        if (Directory.Exists(Root)) Directory.Delete(Root, true);
-        Directory.Move(contenido, Root);
-        if (Directory.Exists(staging)) Directory.Delete(staging, true);
-    }
 }
-
-// ContentManager que lee desde GameData en vez de solo desde los assets de la APK.
