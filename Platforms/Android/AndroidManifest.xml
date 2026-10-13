@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.sonic4ep1.android">
-  <!-- Android 11+: acceso a todos los archivos para leer/crear Sonic4-data en la raíz del almacenamiento. -->
-  <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
-  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
   <uses-permission android:name="android.permission.WAKE_LOCK" />
-  <application android:label="Sonic 4 ep 1" android:icon="@mipmap/ic_launcher" android:theme="@android:style/Theme.NoTitleBar.Fullscreen" android:allowBackup="true" android:requestLegacyExternalStorage="true">
+  <application android:label="Sonic 4 ep 1" android:icon="@mipmap/ic_launcher" android:theme="@android:style/Theme.NoTitleBar.Fullscreen" android:allowBackup="true">
   </application>
 </manifest>

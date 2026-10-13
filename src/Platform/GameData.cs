@@ -9,9 +9,10 @@ public static class GameData
 {
     public const string NombreCarpeta = "Sonic4-data";
 
-    // Raíz del almacenamiento compartido, p. ej. /storage/emulated/0/Sonic4-data
+    // Carpeta de datos dentro de la app (no necesita permisos de almacenamiento):
+    // /storage/emulated/0/Android/data/com.sonic4ep1.android/files/Sonic4-data
     public static string Root =>
-        Path.Combine(Android.OS.Environment.ExternalStorageDirectory.AbsolutePath, NombreCarpeta);
+        Path.Combine(Android.App.Application.Context.GetExternalFilesDir(null).AbsolutePath, NombreCarpeta);
 
     // Marca de datos completos: el archivo que siempre carga el juego al arrancar.
     public static bool Ready => File.Exists(Path.Combine(Root, "Kootenay.xnb"));

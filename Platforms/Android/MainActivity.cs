@@ -26,7 +26,6 @@ namespace Sonic4Android
 
         private Sonic4Ep1 _game;
         private bool _iniciado;
-        private bool _esperandoPermiso;
 
         protected override void OnCreate(Bundle bundle)
         {
@@ -35,27 +34,10 @@ namespace Sonic4Android
             Comprobar();
         }
 
-        protected override void OnResume()
-        {
-            base.OnResume();
-            if (_esperandoPermiso)
-            {
-                _esperandoPermiso = false;
-                Comprobar();
-            }
-        }
-
-        // Permiso -> carpeta Sonic4-data -> datos. Sin datos se muestra el botón de importar.
+        // Sin datos se muestra la pantalla de importar; con datos arranca el juego.
         private void Comprobar()
         {
             if (_iniciado) return;
-
-            if (!TieneAcceso())
-            {
-                _esperandoPermiso = true;
-                PedirAcceso();
-                return;
-            }
 
             try { Directory.CreateDirectory(GameData.Root); }
             catch (Exception) { }
@@ -68,40 +50,6 @@ namespace Sonic4Android
 
             _iniciado = true;
             StartGame();
-        }
-
-        private bool TieneAcceso()
-        {
-            if ((int)Build.VERSION.SdkInt >= (int)BuildVersionCodes.R)
-                return Android.OS.Environment.IsExternalStorageManager;
-            return CheckSelfPermission(Android.Manifest.Permission.WriteExternalStorage)
-                   == Permission.Granted;
-        }
-
-        private void PedirAcceso()
-        {
-            if ((int)Build.VERSION.SdkInt >= (int)BuildVersionCodes.R)
-            {
-                var intent = new Intent(Android.Provider.Settings.ActionManageAppAllFilesAccessPermission,
-                    Android.Net.Uri.Parse("package:" + PackageName));
-                StartActivity(intent);
-            }
-            else
-            {
-                RequestPermissions(new[]
-                {
-                    Android.Manifest.Permission.WriteExternalStorage,
-                    Android.Manifest.Permission.ReadExternalStorage
-                }, 1);
-            }
-        }
-
-        public override void OnRequestPermissionsResult(int requestCode, string[] permissions,
-            Permission[] grantResults)
-        {
-            base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
-            _esperandoPermiso = false;
-            Comprobar();
         }
 
         // Pantalla sin datos: un texto y el botón para importar un .zip con los archivos del juego.
@@ -132,6 +80,12 @@ namespace Sonic4Android
             intent.AddCategory(Intent.CategoryOpenable);
             intent.SetType("*/*");
             intent.PutExtra(Intent.ExtraMimeTypes, new[] { "application/zip", "application/x-zip-compressed" });
+            if (intent.ResolveActivity(PackageManager) == null)
+            {
+                // Algunos dispositivos no tienen el selector de documentos: se usa el de contenido.
+                intent = new Intent(Intent.ActionGetContent);
+                intent.SetType("application/zip");
+            }
             StartActivityForResult(intent, RequestZip);
         }
 
