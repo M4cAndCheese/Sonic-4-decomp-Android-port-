@@ -58,8 +58,10 @@ public class Sonic4Ep1 : Game
         pInstance = this;
         GameContent = new GameDataContent(Services);
         graphics = new GraphicsDeviceManager(this);
-        graphics.PreferredBackBufferWidth = 480;
-        graphics.PreferredBackBufferHeight = 288;
+        // Backbuffer al tamaño real de la pantalla (si no, Android escala 480x288 y mete bandas negras).
+        var dm = Android.App.Application.Context.Resources.DisplayMetrics;
+        graphics.PreferredBackBufferWidth = Math.Max(dm.WidthPixels, dm.HeightPixels);
+        graphics.PreferredBackBufferHeight = Math.Min(dm.WidthPixels, dm.HeightPixels);
         graphics.SupportedOrientations = DisplayOrientation.LandscapeLeft;
         graphics.PreparingDeviceSettings += graphics_PreparingDeviceSettings;
         graphics.SynchronizeWithVerticalRetrace = true;
@@ -74,6 +76,8 @@ public class Sonic4Ep1 : Game
     private void graphics_PreparingDeviceSettings(object sender, PreparingDeviceSettingsEventArgs e)
     {
         PresentationParameters presentationParameter = e.GraphicsDeviceInformation.PresentationParameters;
+        presentationParameter.BackBufferWidth = graphics.PreferredBackBufferWidth;
+        presentationParameter.BackBufferHeight = graphics.PreferredBackBufferHeight;
     }
 
     protected override void Initialize()
