@@ -4,6 +4,7 @@
 // MVID: 093CE2FC-33E2-4332-B0FE-1EA1E44D3AE7
 // Assembly location: C:\Users\zakga\Desktop\Sonic 4\Sonic4 ep I.dll
 
+using Microsoft.Xna.Framework.Content;
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;

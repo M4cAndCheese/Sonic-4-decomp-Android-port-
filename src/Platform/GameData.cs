@@ -75,7 +75,7 @@ public class GameDataContent : ContentManager
 {
     public GameDataContent(IServiceProvider services) : base(services, "Content") { }
 
-    protected internal override Stream OpenStream(string assetName)
+    protected override Stream OpenStream(string assetName)
     {
         return GameData.OpenStream(assetName);
     }
