@@ -10160,7 +10160,7 @@ public class AppMain
 						m_songBGM = _GetPreloadedBGM(sOUND_TABLE.filename[0]);
 						if (m_songBGM == null)
 						{
-							m_songBGM = Sonic4Ep1.pInstance.GameContent.Load<Song>("Sound/" + sOUND_TABLE.filename[0]);
+							m_songBGM = Sonic4Ep1.pInstance.GameContent.Load<Song>("SOUND/" + sOUND_TABLE.filename[0]);
 							bgmPreloadedList.Add(sOUND_TABLE.filename[0], m_songBGM);
 						}
 						m_ActiveSong = se_name;
@@ -78206,7 +78206,7 @@ public class AppMain
 		for (int i = 0; i < array.Length; i++)
 		{
 			SOUND_TABLE sOUND_TABLE = sound_bgm_list[array[i]];
-			Song value = Sonic4Ep1.pInstance.GameContent.Load<Song>("Sound/" + sOUND_TABLE.filename[0]);
+			Song value = Sonic4Ep1.pInstance.GameContent.Load<Song>("SOUND/" + sOUND_TABLE.filename[0]);
 			bgmPreloadedList.Add(sOUND_TABLE.filename[0], value);
 		}
 		return true;
@@ -163993,8 +163993,8 @@ public class AppMain
 	public void amIPhoneInitNN()
 	{
 		OpenGL.init(m_game, m_graphicsDevice);
-		OpenGL.glViewport(0, 0, 480, 288);
-		int num = 480;
+		OpenGL.glViewport(0, 0, Sonic4Ep1.RENDER_W, 288);
+		int num = Sonic4Ep1.RENDER_W;
 		int num2 = 320;
 		amRenderInit();
 		NNS_MATRIX nNS_MATRIX = GlobalPool<NNS_MATRIX>.Alloc();

@@ -42,6 +42,9 @@ public class Sonic4Ep1 : Game
 
     public const int GAME_W = 480;
     public const int GAME_H = 288;
+    // Ancho real del render: se calcula según la proporción de la pantalla (ultrawide = más ancho).
+    // Con alto fijo a 288 px el juego no se estira ni se recorta: solo se ve más escenario a los lados.
+    public static int RENDER_W = GAME_W;
     private RenderTarget2D gameTarget;
     private Rectangle gameRect;
 
@@ -62,6 +65,8 @@ public class Sonic4Ep1 : Game
         var dm = Android.App.Application.Context.Resources.DisplayMetrics;
         graphics.PreferredBackBufferWidth = Math.Max(dm.WidthPixels, dm.HeightPixels);
         graphics.PreferredBackBufferHeight = Math.Min(dm.WidthPixels, dm.HeightPixels);
+        float screenAspect = graphics.PreferredBackBufferWidth / (float)graphics.PreferredBackBufferHeight;
+        RENDER_W = Math.Max(GAME_W, (int)Math.Round(GAME_H * screenAspect));
         graphics.SupportedOrientations = DisplayOrientation.LandscapeLeft;
         graphics.PreparingDeviceSettings += graphics_PreparingDeviceSettings;
         graphics.SynchronizeWithVerticalRetrace = true;
@@ -98,7 +103,7 @@ public class Sonic4Ep1 : Game
         //IL_00a1: Unknown result type (might be due to invalid IL or missing references)
         //IL_00ab: Expected O, but got Unknown
         spriteBatch = new SpriteBatch(base.GraphicsDevice);
-        gameTarget = new RenderTarget2D(base.GraphicsDevice, GAME_W, GAME_H, false, SurfaceFormat.Color, DepthFormat.None);
+        gameTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W, GAME_H, false, SurfaceFormat.Color, DepthFormat.None);
         fntKootenay = GameContent.Load<SpriteFont>("Kootenay");
         fnts[0] = GameContent.Load<SpriteFont>("small");
         fnts[1] = GameContent.Load<SpriteFont>("medium");
@@ -206,23 +211,23 @@ public class Sonic4Ep1 : Game
         base.Draw(gameTime);
     }
 
-    // Área donde se dibuja el juego. Llena toda la pantalla sin bandas negras:
-    // el sobrante se recorta centrado en vez de estirar la imagen.
+    // Área donde se dibuja el juego. Escala uniforme (sin estirar) y sin recortar:
+    // como RENDER_W sigue la proporción de la pantalla, no quedan bandas negras.
     public Rectangle GetGameRect()
     {
         Viewport vp = GraphicsDevice.Viewport;
-        float scale = Math.Max(vp.Width / (float)GAME_W, vp.Height / (float)GAME_H);
-        int w = (int)Math.Ceiling(GAME_W * scale);
-        int h = (int)Math.Ceiling(GAME_H * scale);
+        float scale = Math.Min(vp.Width / (float)RENDER_W, vp.Height / (float)GAME_H);
+        int w = (int)Math.Round(RENDER_W * scale);
+        int h = (int)Math.Round(GAME_H * scale);
         gameRect = new Rectangle((vp.Width - w) / 2, (vp.Height - h) / 2, w, h);
         return gameRect;
     }
 
-    // Toques en coordenadas de pantalla -> coordenadas del juego (480x288).
+    // Toques en coordenadas de pantalla -> coordenadas del juego (RENDER_W x 288).
     public TouchCollection GetGameTouches()
     {
         Rectangle r = GetGameRect();
-        float sx = GAME_W / (float)r.Width;
+        float sx = RENDER_W / (float)r.Width;
         float sy = GAME_H / (float)r.Height;
         List<TouchLocation> list = new List<TouchLocation>();
         foreach (TouchLocation t in TouchPanel.GetState())
