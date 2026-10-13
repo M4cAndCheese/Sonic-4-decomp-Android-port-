@@ -22,7 +22,6 @@
     <PackageReference Include="MonoGame.Framework.Android" Version="3.8.2.1105" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="src/**/*.cs" />
     <AndroidResource Include="Platforms/Android/Resources/**/*" />
     <AndroidAsset Include="Content/**/*" />
   </ItemGroup>
