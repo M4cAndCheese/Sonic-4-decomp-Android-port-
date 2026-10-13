@@ -15,7 +15,22 @@ public static class GameData
         Path.Combine(Android.App.Application.Context.GetExternalFilesDir(null).AbsolutePath, NombreCarpeta);
 
     // Marca de datos completos: el archivo que siempre carga el juego al arrancar.
-    public static bool Ready => File.Exists(Path.Combine(Root, "Kootenay.xnb"));
+    // Datos listos si están en la carpeta de la app o empaquetados en el APK (Content/).
+    public static bool Ready
+    {
+        get
+        {
+            if (File.Exists(Path.Combine(Root, "Kootenay.xnb"))) return true;
+            try
+            {
+                using (TitleContainer.OpenStream("Content/Kootenay.xnb")) return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+    }
 
     public static Stream OpenStream(string assetName)
     {
@@ -28,7 +43,8 @@ public static class GameData
             string p = Path.Combine(Root, rel);
             if (File.Exists(p)) return File.OpenRead(p);
         }
-        return TitleContainer.OpenStream(assetName);
+        // Assets del APK: ruta relativa con barras normales, p. ej. "Content/SOUND/x.wav".
+        return TitleContainer.OpenStream("Content/" + rel);
     }
 
     // Instala los datos copiados a `staging` como la carpeta Sonic4-data.

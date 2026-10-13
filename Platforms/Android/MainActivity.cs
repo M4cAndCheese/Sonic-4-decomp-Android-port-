@@ -1,8 +1,6 @@
 using System;
 using System.IO;
-using System.Threading.Tasks;
 using Android.App;
-using Android.Content;
 using Android.Content.PM;
 using Android.OS;
 using Android.Runtime;
@@ -22,8 +20,6 @@ namespace Sonic4Android
         Exported = true)]
     public class MainActivity : AndroidGameActivity
     {
-        private const int RequestZip = 2;
-
         private Sonic4Ep1 _game;
         private bool _iniciado;
 
@@ -34,7 +30,7 @@ namespace Sonic4Android
             Comprobar();
         }
 
-        // Sin datos se muestra la pantalla de importar; con datos arranca el juego.
+        // Si los datos no están en la carpeta de la app, el juego no arranca.
         private void Comprobar()
         {
             if (_iniciado) return;
@@ -44,7 +40,7 @@ namespace Sonic4Android
 
             if (!GameData.Ready)
             {
-                MostrarImportar();
+                MostrarFaltanDatos();
                 return;
             }
 
@@ -52,8 +48,7 @@ namespace Sonic4Android
             StartGame();
         }
 
-        // Pantalla sin datos: un texto y el botón para importar un .zip con los archivos del juego.
-        private void MostrarImportar()
+        private void MostrarFaltanDatos()
         {
             var layout = new LinearLayout(this) { Orientation = Orientation.Vertical };
             layout.SetGravity(GravityFlags.Center);
@@ -62,91 +57,22 @@ namespace Sonic4Android
 
             var texto = new TextView(this)
             {
-                Text = "No hay datos del juego.\n\nImporta un archivo .zip con los archivos del juego (debe contener Kootenay.xnb)."
+                Text = "No hay datos del juego.\n\nCopia los archivos del juego (debe existir Kootenay.xnb) en:\n\n"
+                       + GameData.Root
+                       + "\n\nLuego pulsa Reintentar."
             };
             texto.Gravity = GravityFlags.Center;
             layout.AddView(texto);
 
-            var boton = new Button(this) { Text = "Importar ZIP" };
-            boton.Click += (s, e) => ElegirZip();
-            layout.AddView(boton);
+            var reintentar = new Button(this) { Text = "Reintentar" };
+            reintentar.Click += (s, e) => Comprobar();
+            layout.AddView(reintentar);
+
+            var cerrar = new Button(this) { Text = "Cerrar" };
+            cerrar.Click += (s, e) => Finish();
+            layout.AddView(cerrar);
 
             SetContentView(layout);
-        }
-
-        private void ElegirZip()
-        {
-            var intent = new Intent(Intent.ActionOpenDocument);
-            intent.AddCategory(Intent.CategoryOpenable);
-            intent.SetType("*/*");
-            intent.PutExtra(Intent.ExtraMimeTypes, new[] { "application/zip", "application/x-zip-compressed" });
-            if (intent.ResolveActivity(PackageManager) == null)
-            {
-                // Algunos dispositivos no tienen el selector de documentos: se usa el de contenido.
-                intent = new Intent(Intent.ActionGetContent);
-                intent.SetType("application/zip");
-            }
-            StartActivityForResult(intent, RequestZip);
-        }
-
-        protected override void OnActivityResult(int requestCode, Result resultCode, Intent data)
-        {
-            base.OnActivityResult(requestCode, resultCode, data);
-            if (requestCode != RequestZip || resultCode != Result.Ok || data?.Data == null) return;
-            ImportarZip(data.Data);
-        }
-
-        private void ImportarZip(Android.Net.Uri uri)
-        {
-            Toast.MakeText(this, "Importando datos, espera…", ToastLength.Long).Show();
-
-            Task.Run(() =>
-            {
-                string tmpZip = Path.Combine(CacheDir.AbsolutePath, "import.zip");
-                string staging = GameData.Root + "_import";
-                try
-                {
-                    using (var entrada = ContentResolver.OpenInputStream(uri))
-                    {
-                        if (entrada == null) throw new IOException("No se pudo abrir el zip");
-                        using (var salida = File.Create(tmpZip))
-                        {
-                            entrada.CopyTo(salida);
-                        }
-                    }
-
-                    if (Directory.Exists(staging)) Directory.Delete(staging, true);
-                    System.IO.Compression.ZipFile.ExtractToDirectory(tmpZip, staging);
-
-                    // El zip puede traer los archivos en la raíz o dentro de una subcarpeta.
-                    string[] marca = Directory.GetFiles(staging, "Kootenay.xnb", SearchOption.AllDirectories);
-                    if (marca.Length == 0) throw new IOException("El zip no contiene Kootenay.xnb");
-
-                    try
-                    {
-                        GameData.Install(Path.GetDirectoryName(marca[0]));
-                    }
-                    finally
-                    {
-                        if (Directory.Exists(staging)) Directory.Delete(staging, true);
-                        if (File.Exists(tmpZip)) File.Delete(tmpZip);
-                    }
-
-                    RunOnUiThread(() =>
-                    {
-                        Toast.MakeText(this, "Datos listos", ToastLength.Short).Show();
-                        Comprobar();
-                    });
-                }
-                catch (Exception ex)
-                {
-                    RunOnUiThread(() =>
-                    {
-                        Toast.MakeText(this, "No se pudo importar: " + ex.Message, ToastLength.Long).Show();
-                        MostrarImportar();
-                    });
-                }
-            });
         }
 
         private void StartGame()
