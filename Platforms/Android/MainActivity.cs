@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using Android.App;
 using Android.Content;
 using Android.Content.PM;
@@ -21,6 +22,8 @@ namespace Sonic4Android
         Exported = true)]
     public class MainActivity : AndroidGameActivity
     {
+        private const int RequestZip = 2;
+
         private Sonic4Ep1 _game;
         private bool _iniciado;
         private bool _esperandoPermiso;
@@ -42,7 +45,7 @@ namespace Sonic4Android
             }
         }
 
-        // Permiso -> carpeta Sonic4-data -> datos. Sin datos no arranca el juego.
+        // Permiso -> carpeta Sonic4-data -> datos. Sin datos se muestra el botón de importar.
         private void Comprobar()
         {
             if (_iniciado) return;
@@ -59,7 +62,7 @@ namespace Sonic4Android
 
             if (!GameData.Ready)
             {
-                MostrarFaltanDatos();
+                MostrarImportar();
                 return;
             }
 
@@ -72,14 +75,13 @@ namespace Sonic4Android
             if ((int)Build.VERSION.SdkInt >= (int)BuildVersionCodes.R)
                 return Android.OS.Environment.IsExternalStorageManager;
             return CheckSelfPermission(Android.Manifest.Permission.WriteExternalStorage)
-                   == Android.Content.PM.Permission.Granted;
+                   == Permission.Granted;
         }
 
         private void PedirAcceso()
         {
             if ((int)Build.VERSION.SdkInt >= (int)BuildVersionCodes.R)
             {
-                Toast.MakeText(this, "Concede acceso a todos los archivos para crear Sonic4-data", ToastLength.Long).Show();
                 var intent = new Intent(Android.Provider.Settings.ActionManageAppAllFilesAccessPermission,
                     Android.Net.Uri.Parse("package:" + PackageName));
                 StartActivity(intent);
@@ -95,24 +97,101 @@ namespace Sonic4Android
         }
 
         public override void OnRequestPermissionsResult(int requestCode, string[] permissions,
-            Android.Content.PM.Permission[] grantResults)
+            Permission[] grantResults)
         {
             base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
             _esperandoPermiso = false;
             Comprobar();
         }
 
-        private void MostrarFaltanDatos()
+        // Pantalla sin datos: un texto y el botón para importar un .zip con los archivos del juego.
+        private void MostrarImportar()
         {
-            RunOnUiThread(() =>
+            var layout = new LinearLayout(this) { Orientation = Orientation.Vertical };
+            layout.SetGravity(GravityFlags.Center);
+            int pad = (int)(24 * Resources.DisplayMetrics.Density);
+            layout.SetPadding(pad, pad, pad, pad);
+
+            var texto = new TextView(this)
             {
-                new AlertDialog.Builder(this)
-                    .SetTitle("Faltan datos del juego")
-                    .SetMessage("No hay datos del juego, ponlos en Sonic4-data en la raíz del dispositivo\n\n(" + GameData.Root + ")")
-                    .SetPositiveButton("Reintentar", (s, e) => Comprobar())
-                    .SetNegativeButton("Cerrar", (s, e) => Finish())
-                    .SetCancelable(false)
-                    .Show();
+                Text = "No hay datos del juego.\n\nImporta un archivo .zip con los archivos del juego (debe contener Kootenay.xnb)."
+            };
+            texto.Gravity = GravityFlags.Center;
+            layout.AddView(texto);
+
+            var boton = new Button(this) { Text = "Importar ZIP" };
+            boton.Click += (s, e) => ElegirZip();
+            layout.AddView(boton);
+
+            SetContentView(layout);
+        }
+
+        private void ElegirZip()
+        {
+            var intent = new Intent(Intent.ActionOpenDocument);
+            intent.AddCategory(Intent.CategoryOpenable);
+            intent.SetType("*/*");
+            intent.PutExtra(Intent.ExtraMimeTypes, new[] { "application/zip", "application/x-zip-compressed" });
+            StartActivityForResult(intent, RequestZip);
+        }
+
+        protected override void OnActivityResult(int requestCode, Result resultCode, Intent data)
+        {
+            base.OnActivityResult(requestCode, resultCode, data);
+            if (requestCode != RequestZip || resultCode != Result.Ok || data?.Data == null) return;
+            ImportarZip(data.Data);
+        }
+
+        private void ImportarZip(Android.Net.Uri uri)
+        {
+            Toast.MakeText(this, "Importando datos, espera…", ToastLength.Long).Show();
+
+            Task.Run(() =>
+            {
+                string tmpZip = Path.Combine(CacheDir.AbsolutePath, "import.zip");
+                string staging = GameData.Root + "_import";
+                try
+                {
+                    using (var entrada = ContentResolver.OpenInputStream(uri))
+                    {
+                        if (entrada == null) throw new IOException("No se pudo abrir el zip");
+                        using (var salida = File.Create(tmpZip))
+                        {
+                            entrada.CopyTo(salida);
+                        }
+                    }
+
+                    if (Directory.Exists(staging)) Directory.Delete(staging, true);
+                    System.IO.Compression.ZipFile.ExtractToDirectory(tmpZip, staging);
+
+                    // El zip puede traer los archivos en la raíz o dentro de una subcarpeta.
+                    string[] marca = Directory.GetFiles(staging, "Kootenay.xnb", SearchOption.AllDirectories);
+                    if (marca.Length == 0) throw new IOException("El zip no contiene Kootenay.xnb");
+
+                    try
+                    {
+                        GameData.Install(Path.GetDirectoryName(marca[0]));
+                    }
+                    finally
+                    {
+                        if (Directory.Exists(staging)) Directory.Delete(staging, true);
+                        if (File.Exists(tmpZip)) File.Delete(tmpZip);
+                    }
+
+                    RunOnUiThread(() =>
+                    {
+                        Toast.MakeText(this, "Datos listos", ToastLength.Short).Show();
+                        Comprobar();
+                    });
+                }
+                catch (Exception ex)
+                {
+                    RunOnUiThread(() =>
+                    {
+                        Toast.MakeText(this, "No se pudo importar: " + ex.Message, ToastLength.Long).Show();
+                        MostrarImportar();
+                    });
+                }
             });
         }
 
