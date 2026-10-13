@@ -24,7 +24,26 @@ namespace Sonic4Android
         {
             base.OnCreate(bundle);
             AndroidEnvironment.UnhandledExceptionRaiser += OnUnhandledException;
+            HideSystemBars();
             StartGame();
+        }
+
+        // Oculta la barra de navegación (atrás/inicio/recientes) para que el juego use todo el ancho.
+        private void HideSystemBars()
+        {
+            Window.DecorView.SystemUiFlags =
+                SystemUiFlags.LayoutStable |
+                SystemUiFlags.LayoutHideNavigation |
+                SystemUiFlags.LayoutFullscreen |
+                SystemUiFlags.HideNavigation |
+                SystemUiFlags.Fullscreen |
+                SystemUiFlags.ImmersiveSticky;
+        }
+
+        public override void OnWindowFocusChanged(bool hasFocus)
+        {
+            base.OnWindowFocusChanged(hasFocus);
+            if (hasFocus) HideSystemBars();
         }
 
         private void StartGame()

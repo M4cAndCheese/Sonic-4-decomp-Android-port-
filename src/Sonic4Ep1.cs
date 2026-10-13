@@ -65,8 +65,6 @@ public class Sonic4Ep1 : Game
         var dm = Android.App.Application.Context.Resources.DisplayMetrics;
         graphics.PreferredBackBufferWidth = Math.Max(dm.WidthPixels, dm.HeightPixels);
         graphics.PreferredBackBufferHeight = Math.Min(dm.WidthPixels, dm.HeightPixels);
-        float screenAspect = graphics.PreferredBackBufferWidth / (float)graphics.PreferredBackBufferHeight;
-        RENDER_W = Math.Max(GAME_W, (int)Math.Round(GAME_H * screenAspect));
         graphics.SupportedOrientations = DisplayOrientation.LandscapeLeft;
         graphics.PreparingDeviceSettings += graphics_PreparingDeviceSettings;
         graphics.SynchronizeWithVerticalRetrace = true;
@@ -103,6 +101,11 @@ public class Sonic4Ep1 : Game
         //IL_00a1: Unknown result type (might be due to invalid IL or missing references)
         //IL_00ab: Expected O, but got Unknown
         spriteBatch = new SpriteBatch(base.GraphicsDevice);
+        // Igual que el widescreen de SMW: la altura se queda en 288 (escala original) y el ancho
+        // se toma de la proporción real del área de dibujo. Así no hay zoom ni estiramiento.
+        var pp = GraphicsDevice.PresentationParameters;
+        float screenAspect = pp.BackBufferWidth / (float)pp.BackBufferHeight;
+        RENDER_W = Math.Max(GAME_W, (int)Math.Round(GAME_H * screenAspect));
         gameTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W, GAME_H, false, SurfaceFormat.Color, DepthFormat.None);
         fntKootenay = GameContent.Load<SpriteFont>("Kootenay");
         fnts[0] = GameContent.Load<SpriteFont>("small");
