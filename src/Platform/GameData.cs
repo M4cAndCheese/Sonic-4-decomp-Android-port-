@@ -1,21 +1,17 @@
-// Datos del juego elegidos por el usuario (carpeta copiada a almacenamiento privado).
-// Si un archivo no está en la carpeta de datos, se usa el de los assets de la APK.
+// Datos del juego: carpeta Sonic4-data en la raíz del almacenamiento del dispositivo.
+// Si un archivo no está ahí, se usa el de los assets de la APK.
 using System;
 using System.IO;
-using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 
 public static class GameData
 {
-    public static string Root
-    {
-        get
-        {
-            string dir = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-            return Path.Combine(dir, "gamedata");
-        }
-    }
+    public const string NombreCarpeta = "Sonic4-data";
+
+    // Raíz del almacenamiento compartido, p. ej. /storage/emulated/0/Sonic4-data
+    public static string Root =>
+        Path.Combine(Android.OS.Environment.ExternalStorageDirectory.AbsolutePath, NombreCarpeta);
 
     // Marca de datos completos: el archivo que siempre carga el juego al arrancar.
     public static bool Ready => File.Exists(Path.Combine(Root, "Kootenay.xnb"));
@@ -33,24 +29,9 @@ public static class GameData
         }
         return TitleContainer.OpenStream(assetName);
     }
-
-    // Instala los datos desde una carpeta de preparación: localiza Kootenay.xnb y mueve su carpeta a Root.
-    public static void Install(string staging)
-    {
-        string marca = Directory.GetFiles(staging, "Kootenay.xnb", SearchOption.AllDirectories).FirstOrDefault();
-        if (marca == null)
-        {
-            Directory.Delete(staging, true);
-            throw new InvalidDataException("La carpeta no contiene Kootenay.xnb. Elige la carpeta donde descomprimiste los datos.");
-        }
-        string contenido = Path.GetDirectoryName(marca);
-        if (Directory.Exists(Root)) Directory.Delete(Root, true);
-        Directory.Move(contenido, Root);
-        if (Directory.Exists(staging)) Directory.Delete(staging, true);
-    }
 }
 
-// ContentManager que lee desde GameData en vez de solo desde los assets de la APK.
+// ContentManager que lee desde Sonic4-data en vez de solo desde los assets de la APK.
 public class GameDataContent : ContentManager
 {
     public GameDataContent(IServiceProvider services) : base(services, "Content") { }

@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Android.App;
 using Android.Content;
 using Android.Content.PM;
@@ -19,34 +20,99 @@ namespace Sonic4Android
         Exported = true)]
     public class MainActivity : AndroidGameActivity
     {
-        private const int RequestDatos = 1;
         private Sonic4Ep1 _game;
+        private bool _iniciado;
+        private bool _esperandoPermiso;
 
         protected override void OnCreate(Bundle bundle)
         {
             base.OnCreate(bundle);
             AndroidEnvironment.UnhandledExceptionRaiser += OnUnhandledException;
+            Comprobar();
+        }
+
+        protected override void OnResume()
+        {
+            base.OnResume();
+            if (_esperandoPermiso)
+            {
+                _esperandoPermiso = false;
+                Comprobar();
+            }
+        }
+
+        // Permiso -> carpeta Sonic4-data -> datos. Sin datos no arranca el juego.
+        private void Comprobar()
+        {
+            if (_iniciado) return;
+
+            if (!TieneAcceso())
+            {
+                _esperandoPermiso = true;
+                PedirAcceso();
+                return;
+            }
+
+            try { Directory.CreateDirectory(GameData.Root); }
+            catch (Exception) { }
 
             if (!GameData.Ready)
             {
-                // Sin datos: pedir el zip antes de arrancar el juego.
-                StartActivityForResult(new Intent(this, typeof(DataPickerActivity)), RequestDatos);
+                MostrarFaltanDatos();
                 return;
             }
+
+            _iniciado = true;
             StartGame();
         }
 
-        protected override void OnActivityResult(int requestCode, Result resultCode, Intent data)
+        private bool TieneAcceso()
         {
-            base.OnActivityResult(requestCode, resultCode, data);
-            if (requestCode == RequestDatos && GameData.Ready)
+            if ((int)Build.VERSION.SdkInt >= (int)BuildVersionCodes.R)
+                return Android.OS.Environment.IsExternalStorageManager;
+            return CheckSelfPermission(Android.Manifest.Permission.WriteExternalStorage)
+                   == Android.Content.PM.Permission.Granted;
+        }
+
+        private void PedirAcceso()
+        {
+            if ((int)Build.VERSION.SdkInt >= (int)BuildVersionCodes.R)
             {
-                StartGame();
+                Toast.MakeText(this, "Concede acceso a todos los archivos para crear Sonic4-data", ToastLength.Long).Show();
+                var intent = new Intent(Android.Provider.Settings.ActionManageAppAllFilesAccessPermission,
+                    Android.Net.Uri.Parse("package:" + PackageName));
+                StartActivity(intent);
             }
-            else if (requestCode == RequestDatos)
+            else
             {
-                Finish();
+                RequestPermissions(new[]
+                {
+                    Android.Manifest.Permission.WriteExternalStorage,
+                    Android.Manifest.Permission.ReadExternalStorage
+                }, 1);
             }
+        }
+
+        public override void OnRequestPermissionsResult(int requestCode, string[] permissions,
+            Android.Content.PM.Permission[] grantResults)
+        {
+            base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
+            _esperandoPermiso = false;
+            Comprobar();
+        }
+
+        private void MostrarFaltanDatos()
+        {
+            RunOnUiThread(() =>
+            {
+                new AlertDialog.Builder(this)
+                    .SetTitle("Faltan datos del juego")
+                    .SetMessage("No hay datos del juego, ponlos en Sonic4-data en la raíz del dispositivo\n\n(" + GameData.Root + ")")
+                    .SetPositiveButton("Reintentar", (s, e) => Comprobar())
+                    .SetNegativeButton("Cerrar", (s, e) => Finish())
+                    .SetCancelable(false)
+                    .Show();
+            });
         }
 
         private void StartGame()
