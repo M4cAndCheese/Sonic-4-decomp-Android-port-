@@ -222,6 +222,6 @@ public class Sonic4Ep1 : Game
             Vector2 p = new Vector2((t.Position.X - r.X) * sx, (t.Position.Y - r.Y) * sy);
             list.Add(new TouchLocation(t.Id, t.State, p));
         }
-        return new TouchCollection(list);
+        return new TouchCollection(list.ToArray());
     }
 }
