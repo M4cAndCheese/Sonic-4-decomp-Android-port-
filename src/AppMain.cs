@@ -163994,8 +163994,11 @@ public class AppMain
 	{
 		OpenGL.init(m_game, m_graphicsDevice);
 		OpenGL.glViewport(0, 0, Sonic4Ep1.RENDER_W, 288);
-		int num = Sonic4Ep1.RENDER_W;
+		int num = 480;
 		int num2 = 320;
+		// Ultrawide: el viewport es más ancho, así que el aspect crece con la misma proporción.
+		// Así la escala en píxeles no cambia (no hay zoom ni estiramiento) y se ve más escenario.
+		float wideFactor = Sonic4Ep1.RENDER_W / (float)num;
 		amRenderInit();
 		NNS_MATRIX nNS_MATRIX = GlobalPool<NNS_MATRIX>.Alloc();
 		new NNS_VECTOR(0f, 0f, -1f);
@@ -164004,8 +164007,8 @@ public class AppMain
 		config.WindowWidth = num;
 		config.WindowHeight = num2;
 		nnConfigureSystemGL(config);
-		nnMakePerspectiveMatrix(nNS_MATRIX, NNM_DEGtoA32(45f), (float)num2 / (float)num, 1f, 10000f);
-		_am_draw_video.draw_aspect = (float)num2 / (float)num;
+		nnMakePerspectiveMatrix(nNS_MATRIX, NNM_DEGtoA32(45f), (float)num2 / (float)num * wideFactor, 1f, 10000f);
+		_am_draw_video.draw_aspect = (float)num2 / (float)num * wideFactor;
 		nnSetProjection(nNS_MATRIX, 0);
 		_am_draw_video.draw_width = num;
 		_am_draw_video.draw_height = num2;

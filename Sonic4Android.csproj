@@ -21,7 +21,7 @@
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidPackageAlignment>16</AndroidPackageAlignment>
     <!-- AssetManager.OpenFd (usado por MediaPlayer para la música) solo abre assets sin comprimir. -->
-    <AndroidStoreUncompressedFileExtensions>.wma;.wav;.xnb</AndroidStoreUncompressedFileExtensions>
+    <AndroidStoreUncompressedFileExtensions>.m4a;.wav;.xnb</AndroidStoreUncompressedFileExtensions>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <ItemGroup>
