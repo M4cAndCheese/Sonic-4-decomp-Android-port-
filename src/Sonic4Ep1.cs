@@ -47,6 +47,12 @@ public class Sonic4Ep1 : Game
     // Ancho real del render: se calcula según la proporción de la pantalla (ultrawide = más ancho).
     // Con alto fijo a 288 px el juego no se estira ni se recorta: solo se ve más escenario a los lados.
     public static int RENDER_W = GAME_W;
+    // Ancho máximo del mundo visible (21:9 a 288 px de alto ronda 672; 24:9 ronda 768).
+    public const int MAX_RENDER_W = 800;
+    // Factor de resolución interna: el juego se dibuja a más píxeles y se reduce a la pantalla sin perder nitidez.
+    public static int RENDER_SCALE = 1;
+    // Límite de tamaño de textura del render target (seguro en casi todos los Android).
+    public const int MAX_TARGET_DIM = 4096;
     private RenderTarget2D gameTarget;
     private Rectangle gameRect;
     private RenderTarget2D blurTarget;
@@ -144,8 +150,13 @@ public class Sonic4Ep1 : Game
         // Igual que el widescreen de SMW: la altura se queda en 288 (escala original) y el ancho
         // se toma de la proporción real del área de dibujo. Así no hay zoom ni estiramiento.
         // El juego se dibuja en su resolución original 15:9 (480x288): sin estirar y con la geometría del motor intacta.
-        RENDER_W = GAME_W;
-        gameTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W, GAME_H, false, SurfaceFormat.Color, DepthFormat.None);
+        // Ultrawide sin estirar: el alto se queda en 288 y el ancho sigue la proporción real de la pantalla.
+        float screenAspect = graphics.PreferredBackBufferWidth / (float)graphics.PreferredBackBufferHeight;
+        RENDER_W = Math.Max(GAME_W, Math.Min(MAX_RENDER_W, (int)Math.Round(GAME_H * screenAspect)));
+        // Resolución interna: aprox. la altura real de la pantalla, limitada por el tamaño máximo de textura.
+        int wantScale = (int)Math.Ceiling(graphics.PreferredBackBufferHeight / (float)GAME_H);
+        RENDER_SCALE = Math.Max(1, Math.Min(wantScale, Math.Min(MAX_TARGET_DIM / RENDER_W, MAX_TARGET_DIM / GAME_H)));
+        gameTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W * RENDER_SCALE, GAME_H * RENDER_SCALE, false, SurfaceFormat.Color, DepthFormat.None);
         // Versión mínima del frame para hacer el fondo difuminado de los laterales.
         blurTarget = new RenderTarget2D(base.GraphicsDevice, 32, 18, false, SurfaceFormat.Color, DepthFormat.None);
         stickPos = stickCenter;
