@@ -63,6 +63,10 @@ public class Sonic4Ep1 : Game
     private Vector2 stickPos;
     private float jumpScale = 1f;
     private bool jumpHeld;
+    // Diagnóstico de toques (se ve arriba a la izquierda). Poner en false cuando ya no haga falta.
+    private const bool DEBUG_TOUCH = true;
+    private bool dbgOverride;
+    private bool dbgRan;
     private bool menuOpen;
     private bool editing;
     private bool wideView = true;
@@ -223,9 +227,12 @@ public class Sonic4Ep1 : Game
         if (!AppMain.g_ao_sys_global.is_show_ui && inputDataRead)
         {
             inputDataRead = false;
-            if (!LiveFeature.getInstance().InputOverride() && !Upsell.inputUpsellScreen())
+            dbgOverride = LiveFeature.getInstance().InputOverride();
+            dbgRan = false;
+            if (!dbgOverride && !Upsell.inputUpsellScreen())
             {
                 AppMain.onTouchEvents();
+                dbgRan = true;
             }
             AppMain.amIPhoneAccelerate(ref accel);
         }
@@ -267,6 +274,7 @@ public class Sonic4Ep1 : Game
             spriteBatch.Draw(gameTarget, GetGameRect(), Color.White);
             spriteBatch.End();
             DrawControls(GetGameRect());
+            DrawDebug(GetGameRect());
         }
         LiveFeature.getInstance().ShowOverride();
         Upsell.drawUpsellScreen();
@@ -389,6 +397,30 @@ public class Sonic4Ep1 : Game
         stickSize = 64f;
         stickPos = stickCenter;
         SaveLayout();
+    }
+
+    private void DrawDebug(Rectangle r)
+    {
+        if (!DEBUG_TOUCH || fntKootenay == null || pixelTex == null)
+        {
+            return;
+        }
+        float k = r.Width / (float)RENDER_W;
+        Matrix m = Matrix.CreateScale(k) * Matrix.CreateTranslation(r.X, r.Y, 0f);
+        TouchCollection touches = GetGameTouches();
+        spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, null, null, null, m);
+        foreach (TouchLocation t in touches)
+        {
+            spriteBatch.Draw(pixelTex, new Rectangle((int)t.Position.X - 3, (int)t.Position.Y - 3, 6, 6), Color.Red);
+        }
+        string info = "toques " + touches.Count;
+        if (touches.Count > 0)
+        {
+            info += " juego " + (int)touches[0].Position.X + "," + (int)touches[0].Position.Y + " " + touches[0].State;
+        }
+        info += " | ov " + dbgOverride + " ejec " + dbgRan + " ui " + AppMain.g_ao_sys_global.is_show_ui + " partida " + AppMain.IsStagePlaying();
+        spriteBatch.DrawString(fntKootenay, info, new Vector2(4, 4), Color.Yellow, 0f, Vector2.Zero, 0.35f, SpriteEffects.None, 0f);
+        spriteBatch.End();
     }
 
     private void DrawControls(Rectangle r)
