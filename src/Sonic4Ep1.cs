@@ -107,6 +107,8 @@ public class Sonic4Ep1 : Game
     private static readonly Rectangle MenuResetBase = new Rectangle(160, 202, 160, 26);
     private static readonly Rectangle MenuCloseBase = new Rectangle(160, 236, 160, 26);
 
+    private Rectangle PauseRect { get { return new Rectangle(RENDER_W / 2 - 58, 0, 116, 60); } }
+
     private static Rectangle ShiftX(Rectangle r, int dx)
     {
         return new Rectangle(r.X + dx, r.Y, r.Width, r.Height);
@@ -183,8 +185,9 @@ public class Sonic4Ep1 : Game
         RENDER_W = ULTRAWIDE_ENABLED ? Math.Max(GAME_W, Math.Min(MAX_RENDER_W, (int)Math.Round(GAME_H * screenAspect))) : GAME_W;
         // Resolución interna: aprox. la altura real de la pantalla, limitada por el tamaño máximo de textura.
         // Ultra HD: 2x la altura de la pantalla, limitado por MAX_TARGET_DIM.
-        int wantScale = (int)Math.Ceiling(2f * graphics.PreferredBackBufferHeight / (float)GAME_H);
-        RENDER_SCALE = Math.Max(1, Math.Min(wantScale, Math.Min(MAX_TARGET_DIM / RENDER_W, MAX_TARGET_DIM / GAME_H)));
+        // Render a resolución nativa (480x320): los assets del motor son de esa resolución. Con muestreo de píxel
+        // cercano (modo nítido) el escalado a la pantalla se ve como pixel art; con filtro suave se mezcla.
+        RENDER_SCALE = 1;
         gameTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W * RENDER_SCALE, GAME_H * RENDER_SCALE, false, SurfaceFormat.Color, DepthFormat.Depth24);
         // Versión mínima del frame para hacer el fondo difuminado de los laterales.
         blurTarget = new RenderTarget2D(base.GraphicsDevice, 32, 18, false, SurfaceFormat.Color, DepthFormat.None);
@@ -274,6 +277,18 @@ public class Sonic4Ep1 : Game
         }
         prevBackPressed = backNow;
         UpdateTouchFrame();
+        // Botón de pausa del HUD (centrado arriba). La zona fija del motor no coincide con el ultrawide,
+        // así que aquí se detecta el toque y se pide la pausa directamente.
+        if (!menuOpen && !editing && AppMain.IsStageTouchActive())
+        {
+            foreach (TouchLocation t in newTouches)
+            {
+                if (InRect(t.Position, PauseRect))
+                {
+                    AppMain.g_pause_flag = true;
+                }
+            }
+        }
         // El engranaje usa los toques nuevos de este fotograma (no depende del estado Pressed).
         if (!menuOpen && !editing && AppMain.IsStageTouchActive())
         {
@@ -336,11 +351,14 @@ public class Sonic4Ep1 : Game
             spriteBatch.Draw(gameTarget, blurTarget.Bounds, Color.White);
             spriteBatch.End();
             GraphicsDevice.SetRenderTarget(null);
+            // El fondo difuminado usa muestreo lineal (es borroso a propósito); la capa del juego usa el modo elegido.
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.LinearClamp, null, null);
             if (wideView)
             {
                 spriteBatch.Draw(blurTarget, GraphicsDevice.Viewport.Bounds, new Color(110, 110, 110));
             }
+            spriteBatch.End();
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, softFilter ? SamplerState.LinearClamp : SamplerState.PointClamp, null, null);
             spriteBatch.Draw(softFilter && softTarget != null ? (Texture2D)softTarget : gameTarget, GetGameRect(), Color.White);
             spriteBatch.End();
             DrawControls(GetGameRect());
