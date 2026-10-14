@@ -76301,7 +76301,7 @@ public class AppMain
 	{
 		AMS_PARAM_DRAW_PRIMITIVE aMS_PARAM_DRAW_PRIMITIVE = (AMS_PARAM_DRAW_PRIMITIVE)command.param;
 		NNS_MATRIX amDrawSortPrimitive2D_mtx = _amDrawSortPrimitive2D_mtx;
-		nnMakeOrthoMatrix(amDrawSortPrimitive2D_mtx, 0f, 720f, 1080f, 0f, 1f, 3f);
+		AmMakeOrtho2D(amDrawSortPrimitive2D_mtx);
 		amDrawSetProjection(amDrawSortPrimitive2D_mtx, 1);
 		if (aMS_PARAM_DRAW_PRIMITIVE.texlist != null && aMS_PARAM_DRAW_PRIMITIVE.texId != -1)
 		{
@@ -169203,11 +169203,24 @@ public class AppMain
 		return false;
 	}
 
+	// Ortho 2D: el eje de 1080 es el ancho de la pantalla. Se amplía de forma simétrica
+	// para que el 2D no se estire en ultrawide: píxeles cuadrados y fondos que se extienden a los lados.
+	// Con RENDER_W = 480 la ampliación es 0 y queda igual que antes.
+	private static void AmMakeOrtho2D(NNS_MATRIX mtx)
+	{
+		float d = 1.125f * (Sonic4Ep1.RENDER_W - Sonic4Ep1.GAME_W);
+		if (d < 0f)
+		{
+			d = 0f;
+		}
+		nnMakeOrthoMatrix(mtx, 0f, 720f, 1080f + d, 0f - d, 1f, 3f);
+	}
+
 	public static void AoActDrawPre()
 	{
 		NNS_MATRIX aoActDrawPre_mtx = AoActDrawPre_mtx;
 		aoActDrawPre_mtx.Clear();
-		nnMakeOrthoMatrix(aoActDrawPre_mtx, 0f, 720f, 1080f, 0f, 1f, 3f);
+		AmMakeOrtho2D(aoActDrawPre_mtx);
 		amDrawSetProjection(aoActDrawPre_mtx, 1);
 		nnMakeUnitMatrix(aoActDrawPre_mtx);
 		nnRotateZMatrix(aoActDrawPre_mtx, aoActDrawPre_mtx, NNM_DEGtoA32(90f));
