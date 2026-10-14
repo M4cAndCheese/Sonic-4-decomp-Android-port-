@@ -180632,7 +180632,16 @@ public class AppMain
 	{
 		try
 		{
-			return g_gs_main_sys_info.game_mode == 0 && g_gm_main_system.ply_work[0] != null && gm_pause_tcb == null;
+			if (gm_pause_tcb != null)
+			{
+				return false;
+			}
+			// Fases especiales: su flujo no usa ply_work[0] como las etapas normales, así que se cuentan como partida.
+			if (GSM_MAIN_STAGE_IS_SPSTAGE())
+			{
+				return true;
+			}
+			return (g_gs_main_sys_info.game_mode == 0 || g_gs_main_sys_info.game_mode == 1) && g_gm_main_system.ply_work[0] != null;
 		}
 		catch (Exception)
 		{
