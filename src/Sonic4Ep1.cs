@@ -69,15 +69,17 @@ public class Sonic4Ep1 : Game
     private Texture2D padSheet;
     private Texture2D pixelTex;
     private Texture2D gearTex;
-    // Diseño por defecto (como el de Sonic 2): d-pad abajo a la izquierda y salto abajo a la derecha.
-    private const float DefEdge = 68f;
-    private const float DefY = 244f;
-    private const float DefStickSize = 74f;
-    private const float DefJumpSize = 62f;
+    // Diseño por defecto, medido de la captura del dispositivo (coordenadas del motor, alto GAME_H = 320).
+    // d-pad abajo a la izquierda y salto abajo a la derecha. Lo usan los builds que no tengan pad_layout.txt.
+    private const float DefEdge = 68f;        // centro X del d-pad desde el borde izquierdo
+    private const float DefJumpEdge = 58f;    // centro X del salto desde el borde derecho (ancla a RENDER_W)
+    private const float DefY = 244f;          // centro Y de ambos botones
+    private const float DefStickSize = 74f;   // diámetro del d-pad
+    private const float DefJumpSize = 74f;    // diámetro del salto
     private Vector2 stickCenter = new Vector2(68f, 244f);
-    private Vector2 jumpCenter = new Vector2(412f, 244f);
+    private Vector2 jumpCenter = new Vector2(625f, 244f);
     private float stickSize = 74f;
-    private float jumpSize = 62f;
+    private float jumpSize = 74f;
     private Vector2 stickPos;
     private float jumpScale = 1f;
     private bool jumpHeld;
@@ -505,7 +507,7 @@ public class Sonic4Ep1 : Game
 
     private void SetDefaultLayout()
     {
-        jumpCenter = new Vector2(RENDER_W - DefEdge, DefY);
+        jumpCenter = new Vector2(RENDER_W - DefJumpEdge, DefY);
         jumpSize = DefJumpSize;
         stickCenter = new Vector2(DefEdge, DefY);
         stickSize = DefStickSize;

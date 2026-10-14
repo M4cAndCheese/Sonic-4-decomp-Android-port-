@@ -37,3 +37,9 @@
   (`GMD_SOUND_1UP_JINGLE_RESUME_FRAME = 300`) que reanuda la música aunque el jingle no avise.
 - "Diente de sierra": con alto 288 la escala al celular suele ser fraccionaria, y el muestreo de punto
   dejaba bordes escalonados. Si la escala no es entera, ahora se usa muestreo lineal.
+
+## Diseño por defecto del pad (builds nuevos)
+- `Sonic4Ep1.cs`: el d-pad y el salto usan el diseño medido de la captura (alto GAME_H = 320):
+  d-pad en (68, 244) con diámetro 74; salto a 58 px del borde derecho, en y = 244, diámetro 74.
+  Antes el salto tenía diámetro 62 y ancla 68 px.
+- Un `pad_layout.txt` guardado en el dispositivo sigue teniendo prioridad sobre estos valores.
