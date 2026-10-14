@@ -71,6 +71,10 @@ public class Sonic4Ep1 : Game
     private const bool DEBUG_TOUCH = true;
     private bool dbgOverride;
     private bool dbgRan;
+    // Toques de este fotograma: los que siguen presionados y los que son nuevos (no estaban en el anterior).
+    private TouchCollection frameTouches;
+    private readonly List<TouchLocation> newTouches = new List<TouchLocation>();
+    private HashSet<int> prevTouchIds = new HashSet<int>();
     private bool menuOpen;
     private bool editing;
     private bool wideView = true;
@@ -228,12 +232,13 @@ public class Sonic4Ep1 : Game
             AppMain.back_key_is_pressed = true;
         }
         prevBackPressed = backNow;
-        // El engranaje se detecta aquí, en Update, para no perder el toque si Draw no ve el estado Pressed.
+        UpdateTouchFrame();
+        // El engranaje usa los toques nuevos de este fotograma (no depende del estado Pressed).
         if (!menuOpen && !editing && AppMain.IsStagePlaying())
         {
-            foreach (TouchLocation t in GetGameTouches())
+            foreach (TouchLocation t in newTouches)
             {
-                if (t.State == TouchLocationState.Pressed && InRect(t.Position, GearRect))
+                if (InRect(t.Position, GearRect))
                 {
                     menuOpen = true;
                 }
@@ -415,6 +420,26 @@ public class Sonic4Ep1 : Game
         SaveLayout();
     }
 
+    private void UpdateTouchFrame()
+    {
+        frameTouches = GetGameTouches();
+        newTouches.Clear();
+        HashSet<int> cur = new HashSet<int>();
+        foreach (TouchLocation t in frameTouches)
+        {
+            if (t.State == TouchLocationState.Released || t.State == TouchLocationState.Invalid)
+            {
+                continue;
+            }
+            cur.Add(t.Id);
+            if (!prevTouchIds.Contains(t.Id))
+            {
+                newTouches.Add(t);
+            }
+        }
+        prevTouchIds = cur;
+    }
+
     private void DrawDebug(Rectangle r)
     {
         if (!DEBUG_TOUCH || fntKootenay == null || pixelTex == null)
@@ -455,7 +480,7 @@ public class Sonic4Ep1 : Game
         }
         float k = r.Width / (float)RENDER_W;
         Matrix m = Matrix.CreateScale(k) * Matrix.CreateTranslation(r.X, r.Y, 0f);
-        TouchCollection touches = GetGameTouches();
+        TouchCollection touches = frameTouches;
 
         // El salto del motor usa la misma zona que se dibuja.
         AppMain.SetJumpKeyRect(
@@ -467,12 +492,12 @@ public class Sonic4Ep1 : Game
         spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, null, null, null, m);
         if (menuOpen)
         {
-            HandleMenu(touches);
+            HandleMenu(newTouches);
             DrawMenu();
         }
         else if (editing)
         {
-            HandleEdit(touches);
+            HandleEdit(touches, newTouches);
             DrawEdit();
         }
         else
@@ -493,9 +518,8 @@ public class Sonic4Ep1 : Game
             {
                 continue;
             }
-            if (t.State == TouchLocationState.Pressed && InRect(t.Position, GearRect))
+            if (InRect(t.Position, GearRect))
             {
-                menuOpen = true;
                 continue;
             }
             if (Vector2.Distance(t.Position, jumpCenter) < jumpSize / 2f)
@@ -538,14 +562,10 @@ public class Sonic4Ep1 : Game
         spriteBatch.Draw(padSheet, pos, SrcBall, c, 0f, new Vector2(88, 88), size * 0.7f / 176f * scale, SpriteEffects.None, 0f);
     }
 
-    private void HandleMenu(TouchCollection touches)
+    private void HandleMenu(List<TouchLocation> newTouches)
     {
-        foreach (TouchLocation t in touches)
+        foreach (TouchLocation t in newTouches)
         {
-            if (t.State != TouchLocationState.Pressed)
-            {
-                continue;
-            }
             if (InRect(t.Position, MenuVistaRect))
             {
                 wideView = !wideView;
@@ -587,29 +607,38 @@ public class Sonic4Ep1 : Game
         }
     }
 
-    private void HandleEdit(TouchCollection touches)
+    private void HandleEdit(TouchCollection touches, List<TouchLocation> newTouches)
     {
+        // Empezar a arrastrar: solo con toques nuevos.
+        foreach (TouchLocation t in newTouches)
+        {
+            if (dragId != -1)
+            {
+                break;
+            }
+            if (InRect(t.Position, ListoRect))
+            {
+                editing = false;
+                SaveLayout();
+                return;
+            }
+            Vector2 jh = jumpCenter + new Vector2(jumpSize / 2f, jumpSize / 2f);
+            Vector2 sh = stickCenter + new Vector2(stickSize / 2f, stickSize / 2f);
+            if (Vector2.Distance(t.Position, jh) < 18f) { dragKind = 3; dragId = t.Id; }
+            else if (Vector2.Distance(t.Position, jumpCenter) < jumpSize / 2f) { dragKind = 1; dragId = t.Id; }
+            else if (Vector2.Distance(t.Position, sh) < 18f) { dragKind = 2; dragId = t.Id; }
+            else if (Vector2.Distance(t.Position, stickCenter) < stickSize / 2f) { dragKind = 0; dragId = t.Id; }
+        }
+
+        // Seguir el arrastre con el dedo que lo empezó.
+        bool found = false;
         foreach (TouchLocation t in touches)
         {
-            if (t.State == TouchLocationState.Pressed && dragId == -1)
-            {
-                if (InRect(t.Position, ListoRect))
-                {
-                    editing = false;
-                    SaveLayout();
-                    continue;
-                }
-                Vector2 jh = jumpCenter + new Vector2(jumpSize / 2f, jumpSize / 2f);
-                Vector2 sh = stickCenter + new Vector2(stickSize / 2f, stickSize / 2f);
-                if (Vector2.Distance(t.Position, jh) < 18f) { dragKind = 3; dragId = t.Id; }
-                else if (Vector2.Distance(t.Position, jumpCenter) < jumpSize / 2f) { dragKind = 1; dragId = t.Id; }
-                else if (Vector2.Distance(t.Position, sh) < 18f) { dragKind = 2; dragId = t.Id; }
-                else if (Vector2.Distance(t.Position, stickCenter) < stickSize / 2f) { dragKind = 0; dragId = t.Id; }
-            }
-            if (t.Id != dragId)
+            if (dragId == -1 || t.Id != dragId)
             {
                 continue;
             }
+            found = true;
             if (t.State == TouchLocationState.Released || t.State == TouchLocationState.Invalid)
             {
                 dragId = -1;
@@ -632,6 +661,11 @@ public class Sonic4Ep1 : Game
                     jumpSize = Clamp(2f * Vector2.Distance(p, jumpCenter), 36f, 150f);
                     break;
             }
+        }
+        if (dragId != -1 && !found)
+        {
+            dragId = -1;
+            SaveLayout();
         }
         stickPos = stickCenter;
     }
