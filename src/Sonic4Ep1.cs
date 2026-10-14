@@ -43,9 +43,9 @@ public class Sonic4Ep1 : Game
     public ContentManager GameContent;
 
     public const int GAME_W = 480;
-    // Alto lógico del motor: 288 (m_area.bottom = 288 y el 2D usa esta altura).
-    // Con 320 el juego dibujaba solo arriba y quedaba una franja vacía abajo: pantalla achicada.
-    public const int GAME_H = 288;
+    // Alto lógico del motor: 320. La ortho 2D usa 720 unidades de alto y 1080 de ancho (2.25 u/px en ambos ejes).
+    // Con 288 el eje vertical quedaba a 2.5 u/px y la imagen se veía achicada.
+    public const int GAME_H = 320;
     // Ancho real del render: se calcula según la proporción de la pantalla (ultrawide = más ancho).
     // Con alto fijo a GAME_H el juego no se estira ni se recorta: solo se ve más escenario a los lados.
     public static int RENDER_W = GAME_W;

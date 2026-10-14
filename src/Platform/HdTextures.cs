@@ -14,6 +14,28 @@ public static class HdTextures
 {
     public static bool Enabled = true;
 
+    // Las DDS del paquete iPad vienen con las filas invertidas respecto al PNG del AMB.
+    public static bool FlipY = true;
+
+    // Texturas (SHA1 del PNG) que se dejan sin voltear. Vacío = todas se voltean.
+    private static readonly HashSet<string> NoFlip = new HashSet<string>
+    {
+    };
+
+    private static void FlipRows(Color[] px, int w, int h)
+    {
+        for (int y = 0; y < h / 2; y++)
+        {
+            int a = y * w, b = (h - 1 - y) * w;
+            for (int x = 0; x < w; x++)
+            {
+                Color t = px[a + x];
+                px[a + x] = px[b + x];
+                px[b + x] = t;
+            }
+        }
+    }
+
     private static readonly Dictionary<string, Texture2D> cache = new Dictionary<string, Texture2D>();
     private static readonly HashSet<string> missing = new HashSet<string>();
     private static readonly byte[] IEND = { (byte)'I', (byte)'E', (byte)'N', (byte)'D' };
@@ -44,7 +66,7 @@ public static class HdTextures
             using (var ms = new MemoryStream())
             {
                 s.CopyTo(ms);
-                tex = Decode(gd, ms.ToArray());
+                tex = Decode(gd, ms.ToArray(), FlipY && !NoFlip.Contains(key));
             }
         }
         catch (Exception)
@@ -73,7 +95,7 @@ public static class HdTextures
         return -1;
     }
 
-    private static Texture2D Decode(GraphicsDevice gd, byte[] d)
+    private static Texture2D Decode(GraphicsDevice gd, byte[] d, bool flip)
     {
         if (d == null || d.Length < 128 || d[0] != 'D' || d[1] != 'D' || d[2] != 'S' || d[3] != ' ')
         {
@@ -86,6 +108,7 @@ public static class HdTextures
         if (!dxt5 && fourCC != "DXT1") return null;
 
         Color[] pixels = DecodeDxt(d, 128, width, height, dxt5);
+        if (flip) FlipRows(pixels, width, height);
         var tex = new Texture2D(gd, width, height, false, SurfaceFormat.Color);
         tex.SetData(pixels);
         return tex;

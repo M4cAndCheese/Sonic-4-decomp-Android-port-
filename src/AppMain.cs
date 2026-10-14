@@ -15085,7 +15085,7 @@ public class AppMain
 			m_area.left = 0f;
 			m_area.top = 0f;
 			m_area.right = AMD_SCREEN_2D_WIDTH;
-			m_area.bottom = 288f;
+			m_area.bottom = 320f;
 			m_center.x = AMD_SCREEN_2D_WIDTH * 0.5f;
 			m_center.y = 144f;
 			return create();
@@ -15126,7 +15126,7 @@ public class AppMain
 			m_area.left = 0f;
 			m_area.top = 0f;
 			m_area.right = AMD_SCREEN_2D_WIDTH;
-			m_area.bottom = 288f;
+			m_area.bottom = 320f;
 			m_center = center;
 			return create();
 		}
@@ -15136,7 +15136,7 @@ public class AppMain
 			m_area.left = 0f;
 			m_area.top = 0f;
 			m_area.right = AMD_SCREEN_2D_WIDTH;
-			m_area.bottom = 288f;
+			m_area.bottom = 320f;
 			m_center.x = center_x;
 			m_center.y = center_y;
 			return create();
@@ -19330,7 +19330,7 @@ public class AppMain
 			m_area.left = 0f;
 			m_area.top = 0f;
 			m_area.right = AMD_SCREEN_2D_WIDTH;
-			m_area.bottom = 288f;
+			m_area.bottom = 320f;
 			return create();
 		}
 
