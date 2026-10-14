@@ -43,3 +43,8 @@
   d-pad en (68, 244) con diámetro 74; salto a 58 px del borde derecho, en y = 244, diámetro 74.
   Antes el salto tenía diámetro 62 y ancla 68 px.
 - Un `pad_layout.txt` guardado en el dispositivo sigue teniendo prioridad sobre estos valores.
+
+## Escenario aplastado en ultrawide
+- `AppMain.amIPhoneInitNN`: el ancho lógico (`width_2d`, `draw_width`, `disp_width`) usa `Sonic4Ep1.RENDER_W`
+  en lugar de 480. Antes la cámara y el 2D se calculaban con 480 y la escena se veía aplastada.
+- Se quitó `Content/HD/` (texturas HD del iPad). El código de `HdTextures` queda inactivo porque no encuentra archivos.
