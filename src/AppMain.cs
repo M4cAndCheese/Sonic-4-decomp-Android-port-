@@ -163999,8 +163999,9 @@ public class AppMain
 		int num2 = 320;
 		// Ultrawide: el viewport es más ancho, así que el aspect crece con la misma proporción.
 		// Así la escala en píxeles no cambia (no hay zoom ni estiramiento) y se ve más escenario.
-		float wideFactor = 1f;
-		float projAspect = (Sonic4Ep1.RENDER_W == num) ? (float)num2 / (float)num : 1.12f * 288f / (float)Sonic4Ep1.RENDER_W;
+		// nnMakePerspectiveMatrix usa M00 = cot / aspect, así que aspect debe ser ancho/alto del viewport.
+		// Con RENDER_W x 288 se obtienen píxeles cuadrados: sin estirado y sin zoom horizontal.
+		float projAspect = (float)Sonic4Ep1.RENDER_W / (float)Sonic4Ep1.GAME_H;
 		amRenderInit();
 		NNS_MATRIX nNS_MATRIX = GlobalPool<NNS_MATRIX>.Alloc();
 		new NNS_VECTOR(0f, 0f, -1f);

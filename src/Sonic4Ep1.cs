@@ -617,11 +617,9 @@ public class Sonic4Ep1 : Game
 
     private void DrawJump(Vector2 pos, float size, float scale, Color c)
     {
-        float side = size * scale;
-        if (jumpHeld && pixelTex != null)
+        // Sin cuadro alrededor al presionar: solo se aclara el aro del botón.
+        if (jumpHeld)
         {
-            // Cuadro iluminado mientras el dedo está sobre el botón de salto.
-            spriteBatch.Draw(pixelTex, new Rectangle((int)(pos.X - side / 2f), (int)(pos.Y - side / 2f), (int)side, (int)side), new Color(255, 215, 90, 110));
             c = Color.White;
         }
         spriteBatch.Draw(padSheet, pos, SrcJumpRing, c, 0f, new Vector2(128, 128), size / 256f * scale, SpriteEffects.None, 0f);
