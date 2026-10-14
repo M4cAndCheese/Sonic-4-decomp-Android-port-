@@ -29,44 +29,55 @@ jobs:
       - name: Restore
         run: dotnet restore Sonic4Android.csproj
 
-      - name: Preparar clave de firma (release)
+      # Clave automática persistente: se genera una vez y se reutiliza entre builds
+      # (así las actualizaciones instalan sin desinstalar). Solo se usa si no hay secretos propios.
+      - name: Restaurar clave automática
+        uses: actions/cache@v4
+        with:
+          path: signing/auto.p12
+          key: android-auto-signing-v1
+
+      - name: Preparar clave de firma
         id: keys
         env:
           PEM: ${{ secrets.ANDROID_SIGNING_PEM }}
           KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          if [ -z "$PEM" ] || [ -z "$KS_PASS" ]; then
-            echo "::warning::Sin secretos ANDROID_SIGNING_PEM / ANDROID_KEYSTORE_PASSWORD: se firma con la clave de depuración"
-            echo "has_key=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          if [ -n "$PEM" ] && [ -n "$KS_PASS" ]; then
+            printf '%s\n' "$PEM" | tr -d '\r' > "$RUNNER_TEMP/bundle.pem"
+            awk '/BEGIN PRIVATE KEY/,/END PRIVATE KEY/' "$RUNNER_TEMP/bundle.pem" > "$RUNNER_TEMP/key.pem"
+            awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/' "$RUNNER_TEMP/bundle.pem" > "$RUNNER_TEMP/cert.pem"
+            openssl pkcs12 -export \
+              -inkey "$RUNNER_TEMP/key.pem" \
+              -in "$RUNNER_TEMP/cert.pem" \
+              -name sonic4 \
+              -out "$RUNNER_TEMP/release.p12" \
+              -passout env:KS_PASS
+            echo "SIGN_KS=$RUNNER_TEMP/release.p12" >> "$GITHUB_ENV"
+            echo "SIGN_PASS=$KS_PASS" >> "$GITHUB_ENV"
+            echo "MODE=release (propia)" >> "$GITHUB_ENV"
+          else
+            AUTO_PASS="sonic4-auto-signing"
+            if [ ! -f signing/auto.p12 ]; then
+              mkdir -p signing
+              keytool -genkeypair -keystore signing/auto.p12 -storetype PKCS12 \
+                -alias sonic4 -keyalg RSA -keysize 2048 -validity 10000 \
+                -storepass "$AUTO_PASS" -keypass "$AUTO_PASS" -dname "CN=Sonic 4 ep 1"
+            fi
+            echo "SIGN_KS=$GITHUB_WORKSPACE/signing/auto.p12" >> "$GITHUB_ENV"
+            echo "SIGN_PASS=$AUTO_PASS" >> "$GITHUB_ENV"
+            echo "MODE=automatica (cacheada)" >> "$GITHUB_ENV"
           fi
-          printf '%s\n' "$PEM" | tr -d '\r' > "$RUNNER_TEMP/bundle.pem"
-          awk '/BEGIN PRIVATE KEY/,/END PRIVATE KEY/' "$RUNNER_TEMP/bundle.pem" > "$RUNNER_TEMP/key.pem"
-          awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/' "$RUNNER_TEMP/bundle.pem" > "$RUNNER_TEMP/cert.pem"
-          openssl pkcs12 -export \
-            -inkey "$RUNNER_TEMP/key.pem" \
-            -in "$RUNNER_TEMP/cert.pem" \
-            -name sonic4 \
-            -out "$RUNNER_TEMP/release.p12" \
-            -passout env:KS_PASS
-          echo "has_key=true" >> "$GITHUB_OUTPUT"
 
-      - name: Build APK (release)
-        if: steps.keys.outputs.has_key == 'true'
-        env:
-          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      - name: Build APK firmado
         run: |
           dotnet build Sonic4Android.csproj -c Release -f net10.0-android \
             -p:AndroidPackageFormat=apk \
             -p:AndroidKeyStore=true \
-            -p:AndroidSigningKeyStore="$RUNNER_TEMP/release.p12" \
-            -p:AndroidSigningStorePass="$KS_PASS" \
+            -p:AndroidSigningKeyStore="$SIGN_KS" \
+            -p:AndroidSigningStorePass="$SIGN_PASS" \
             -p:AndroidSigningKeyAlias=sonic4 \
-            -p:AndroidSigningKeyPass="$KS_PASS"
-
-      - name: Build APK (depuración, sin secretos)
-        if: steps.keys.outputs.has_key != 'true'
-        run: dotnet build Sonic4Android.csproj -c Release -f net10.0-android -p:AndroidPackageFormat=apk
+            -p:AndroidSigningKeyPass="$SIGN_PASS"
 
       - name: Collect APK
         run: |
@@ -84,7 +95,8 @@ jobs:
           unzip -tq "$APK"
           BT=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)
           "$BT/zipalign" -c -P 16 -v 4 "$APK"
-          "$BT/apksigner" verify --verbose --print-certs "$APK"
+          # Falla el build si el APK no tiene firma válida (v2 o superior)
+          "$BT/apksigner" verify --min-sdk-version 24 --verbose --print-certs "$APK"
           SHA=$(sha256sum "$APK" | cut -d' ' -f1)
           SIZE=$(stat -c%s "$APK")
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
@@ -105,7 +117,7 @@ jobs:
           name: Sonic 4 ep 1 build ${{ github.run_number }}
           body: |
             APK: sonic-4-ep-1.apk
-            Firma: ${{ steps.keys.outputs.has_key == 'true' && 'release (propia)' || 'depuración (no actualizable con builds de release)' }}
+            Firma: ${{ env.MODE }}
             Tamaño: ${{ steps.verify.outputs.size }} bytes
             SHA-256: ${{ steps.verify.outputs.sha }}
           files: artifacts/sonic-4-ep-1.apk

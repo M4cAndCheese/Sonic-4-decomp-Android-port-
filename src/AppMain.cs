@@ -163993,7 +163993,8 @@ public class AppMain
 	public void amIPhoneInitNN()
 	{
 		OpenGL.init(m_game, m_graphicsDevice);
-		OpenGL.glViewport(0, 0, Sonic4Ep1.RENDER_W, 288);
+		// El viewport usa la resolución interna (RENDER_W x 288 multiplicado por RENDER_SCALE).
+		OpenGL.glViewport(0, 0, Sonic4Ep1.RENDER_W * Sonic4Ep1.RENDER_SCALE, 288 * Sonic4Ep1.RENDER_SCALE);
 		int num = 480;
 		int num2 = 320;
 		// Ultrawide: el viewport es más ancho, así que el aspect crece con la misma proporción.
