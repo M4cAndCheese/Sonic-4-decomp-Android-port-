@@ -180538,6 +180538,11 @@ public class AppMain
 
 	public static void onTouchEvents()
 	{
+		// Oculta el pad del motor (salto y cruceta); lo dibuja Sonic4Ep1.DrawPadOverlay con los grises 2013.
+		if (gm_fix_tcb != null && gm_fix_tcb.work != null)
+		{
+			((GMS_FIX_MGR_WORK)gm_fix_tcb.work).flag |= 0x800 | 0x1000;
+		}
 		TouchCollection state = Sonic4Ep1.pInstance.GetGameTouches();
 		for (int i = 0; i < 4; i++)
 		{

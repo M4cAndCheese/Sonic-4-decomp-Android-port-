@@ -48,6 +48,14 @@ public class Sonic4Ep1 : Game
     private RenderTarget2D gameTarget;
     private Rectangle gameRect;
     private RenderTarget2D blurTarget;
+    private bool prevBackPressed;
+
+    // Controles grises del port de Sonic 1 2013 (dibujados encima del pad del motor, que queda oculto).
+    private Texture2D padSheet;
+    private Vector2 stickCenter = new Vector2(62f, 226f);
+    private Vector2 jumpCenter = new Vector2(436f, 264f);
+    private Vector2 stickPos;
+    private float jumpScale = 1f;
 
     protected float deviceMusicVolume;
 
@@ -109,6 +117,18 @@ public class Sonic4Ep1 : Game
         gameTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W, GAME_H, false, SurfaceFormat.Color, DepthFormat.None);
         // Versión mínima del frame para hacer el fondo difuminado de los laterales.
         blurTarget = new RenderTarget2D(base.GraphicsDevice, 32, 18, false, SurfaceFormat.Color, DepthFormat.None);
+        stickPos = stickCenter;
+        try
+        {
+            using (var st = TitleContainer.OpenStream("Content/ui/controls_2013.png"))
+            {
+                padSheet = Texture2D.FromStream(base.GraphicsDevice, st);
+            }
+        }
+        catch (Exception)
+        {
+            padSheet = null; // Sin la hoja de sprites, el juego usa el pad del motor.
+        }
         fntKootenay = GameContent.Load<SpriteFont>("Kootenay");
         fnts[0] = GameContent.Load<SpriteFont>("small");
         fnts[1] = GameContent.Load<SpriteFont>("medium");
@@ -170,6 +190,13 @@ public class Sonic4Ep1 : Game
     protected override void Update(GameTime gameTime)
     {
         AppMain.lastGameTime = gameTime;
+        // El Back se registra al presionarlo (flanco), también dentro de menús y opciones.
+        bool backNow = GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed;
+        if (backNow && !prevBackPressed)
+        {
+            AppMain.back_key_is_pressed = true;
+        }
+        prevBackPressed = backNow;
         if (!AppMain.g_ao_sys_global.is_show_ui && inputDataRead)
         {
             inputDataRead = false;
@@ -178,10 +205,6 @@ public class Sonic4Ep1 : Game
                 AppMain.onTouchEvents();
             }
             AppMain.amIPhoneAccelerate(ref accel);
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
-            {
-                AppMain.back_key_is_pressed = true;
-            }
         }
         try
         {
@@ -217,10 +240,59 @@ public class Sonic4Ep1 : Game
             spriteBatch.Draw(blurTarget, GraphicsDevice.Viewport.Bounds, new Color(110, 110, 110));
             spriteBatch.Draw(gameTarget, GetGameRect(), Color.White);
             spriteBatch.End();
+            DrawPadOverlay(GetGameRect());
         }
         LiveFeature.getInstance().ShowOverride();
         Upsell.drawUpsellScreen();
         base.Draw(gameTime);
+    }
+
+    // Dibuja la cruceta y el salto grises (port 2013) con movimiento suave.
+    // Las coordenadas del juego son 480x288; r es el rectángulo donde se dibuja el juego en pantalla.
+    private void DrawPadOverlay(Rectangle r)
+    {
+        if (padSheet == null)
+        {
+            return;
+        }
+        float k = r.Width / (float)RENDER_W;
+        TouchCollection touches = GetGameTouches();
+        Vector2 stickTarget = stickCenter;
+        bool jumpTouched = false;
+        foreach (TouchLocation t in touches)
+        {
+            if (t.State == TouchLocationState.Released || t.State == TouchLocationState.Invalid)
+            {
+                continue;
+            }
+            if (Vector2.Distance(t.Position, jumpCenter) < 34f)
+            {
+                jumpTouched = true;
+            }
+            else if (t.Position.X < 200f)
+            {
+                Vector2 d = t.Position - stickCenter;
+                float len = d.Length();
+                if (len > 28f)
+                {
+                    d = d / len * 28f;
+                }
+                stickTarget = stickCenter + d;
+            }
+        }
+        stickPos = Vector2.Lerp(stickPos, stickTarget, 0.35f);
+        jumpScale += ((jumpTouched ? 0.92f : 1f) - jumpScale) * 0.3f;
+
+        spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, null, null);
+        Color c = new Color(255, 255, 255, 215);
+        Vector2 baseC = new Vector2(r.X, r.Y) + stickCenter * k;
+        spriteBatch.Draw(padSheet, baseC, new Rectangle(2, 2, 64, 64), c, 0f, new Vector2(32, 32), 64f * k / 64f, SpriteEffects.None, 0f);
+        Vector2 knobC = new Vector2(r.X, r.Y) + stickPos * k;
+        spriteBatch.Draw(padSheet, knobC, new Rectangle(332, 2, 42, 42), c, 0f, new Vector2(21, 21), 42f * k / 42f, SpriteEffects.None, 0f);
+        Rectangle jumpSrc = jumpTouched ? new Rectangle(58, 68, 54, 54) : new Rectangle(2, 68, 54, 54);
+        Vector2 jumpC = new Vector2(r.X, r.Y) + jumpCenter * k;
+        spriteBatch.Draw(padSheet, jumpC, jumpSrc, c, 0f, new Vector2(27, 27), 54f * k / 54f * jumpScale, SpriteEffects.None, 0f);
+        spriteBatch.End();
     }
 
     // Área donde se dibuja el juego. Escala uniforme (sin estirar) y sin recortar:
