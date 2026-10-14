@@ -49,6 +49,8 @@ public class Sonic4Ep1 : Game
     public static int RENDER_W = GAME_W;
     // Ancho máximo del mundo visible (21:9 a 288 px de alto ronda 672; 24:9 ronda 768).
     public const int MAX_RENDER_W = 800;
+    // Ultrawide: false = modo 480x288 sin estirar (con franjas). Ponlo en true para ensanchar el escenario.
+    public const bool ULTRAWIDE_ENABLED = false;
     // Factor de resolución interna: el juego se dibuja a más píxeles y se reduce a la pantalla sin perder nitidez.
     public static int RENDER_SCALE = 1;
     // Límite de tamaño de textura del render target (seguro en casi todos los Android).
@@ -64,14 +66,14 @@ public class Sonic4Ep1 : Game
     private Texture2D gearTex;
     private Vector2 stickCenter = new Vector2(72f, 212f);
     private Vector2 jumpCenter = new Vector2(414f, 236f);
-    private float stickSize = 104f;
+    private float stickSize = 120f;
     private float jumpSize = 84f;
     private Vector2 stickPos;
     private float jumpScale = 1f;
     private bool jumpHeld;
     // Hoja nueva (512x512): aro gris con flechas, aro gris liso, bola brillante.
     private static readonly Rectangle SrcStickRing = new Rectangle(0, 0, 256, 256);
-    private static readonly Rectangle SrcJumpRing = new Rectangle(256, 0, 256, 256);
+    private static readonly Rectangle SrcJumpRing = new Rectangle(256, 256, 256, 256);
     private static readonly Rectangle SrcBall = new Rectangle(12, 322, 176, 176);
     // Diagnóstico de toques (se ve arriba a la izquierda). Poner en false cuando ya no haga falta.
     private const bool DEBUG_TOUCH = false;
@@ -152,11 +154,12 @@ public class Sonic4Ep1 : Game
         // El juego se dibuja en su resolución original 15:9 (480x288): sin estirar y con la geometría del motor intacta.
         // Ultrawide sin estirar: el alto se queda en 288 y el ancho sigue la proporción real de la pantalla.
         float screenAspect = graphics.PreferredBackBufferWidth / (float)graphics.PreferredBackBufferHeight;
-        RENDER_W = Math.Max(GAME_W, Math.Min(MAX_RENDER_W, (int)Math.Round(GAME_H * screenAspect)));
+        RENDER_W = ULTRAWIDE_ENABLED ? Math.Max(GAME_W, Math.Min(MAX_RENDER_W, (int)Math.Round(GAME_H * screenAspect))) : GAME_W;
         // Resolución interna: aprox. la altura real de la pantalla, limitada por el tamaño máximo de textura.
-        int wantScale = (int)Math.Ceiling(graphics.PreferredBackBufferHeight / (float)GAME_H);
+        // Ultra HD: 2x la altura de la pantalla, limitado por MAX_TARGET_DIM.
+        int wantScale = (int)Math.Ceiling(2f * graphics.PreferredBackBufferHeight / (float)GAME_H);
         RENDER_SCALE = Math.Max(1, Math.Min(wantScale, Math.Min(MAX_TARGET_DIM / RENDER_W, MAX_TARGET_DIM / GAME_H)));
-        gameTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W * RENDER_SCALE, GAME_H * RENDER_SCALE, false, SurfaceFormat.Color, DepthFormat.None);
+        gameTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W * RENDER_SCALE, GAME_H * RENDER_SCALE, false, SurfaceFormat.Color, DepthFormat.Depth24);
         // Versión mínima del frame para hacer el fondo difuminado de los laterales.
         blurTarget = new RenderTarget2D(base.GraphicsDevice, 32, 18, false, SurfaceFormat.Color, DepthFormat.None);
         stickPos = stickCenter;
@@ -426,7 +429,7 @@ public class Sonic4Ep1 : Game
         jumpCenter = new Vector2(414f, 236f);
         jumpSize = 84f;
         stickCenter = new Vector2(72f, 212f);
-        stickSize = 104f;
+        stickSize = 120f;
         stickPos = stickCenter;
         SaveLayout();
     }
@@ -500,7 +503,7 @@ public class Sonic4Ep1 : Game
             (int)Math.Min(RENDER_W, jumpCenter.X + jumpSize / 2f),
             (int)Math.Min(GAME_H, jumpCenter.Y + jumpSize / 2f));
 
-        spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, null, null, null, m);
+        spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied, SamplerState.LinearClamp, null, null, null, m);
         if (menuOpen)
         {
             HandleMenu(newTouches);
@@ -553,7 +556,7 @@ public class Sonic4Ep1 : Game
                 Vector2 d = t.Position - stickCenter;
                 float len = d.Length();
                 // Recorrido de la perilla: con radio de perilla 0.23 x tamaño, el borde queda dentro del aro (0.5 x tamaño).
-                float R = stickSize * 0.27f;
+                float R = stickSize * 0.25f;
                 if (len > R)
                 {
                     d = d / len * R;
@@ -576,11 +579,18 @@ public class Sonic4Ep1 : Game
     private void DrawStick(Vector2 basePos, Vector2 knobPos, Color c)
     {
         spriteBatch.Draw(padSheet, basePos, SrcStickRing, c, 0f, new Vector2(128, 128), stickSize / 256f, SpriteEffects.None, 0f);
-        spriteBatch.Draw(padSheet, knobPos, SrcBall, c, 0f, new Vector2(88, 88), stickSize * 0.46f / 176f, SpriteEffects.None, 0f);
+        spriteBatch.Draw(padSheet, knobPos, SrcBall, c, 0f, new Vector2(88, 88), stickSize * 0.5f / 176f, SpriteEffects.None, 0f);
     }
 
     private void DrawJump(Vector2 pos, float size, float scale, Color c)
     {
+        float side = size * scale;
+        if (jumpHeld && pixelTex != null)
+        {
+            // Cuadro iluminado mientras el dedo está sobre el botón de salto.
+            spriteBatch.Draw(pixelTex, new Rectangle((int)(pos.X - side / 2f), (int)(pos.Y - side / 2f), (int)side, (int)side), new Color(255, 215, 90, 110));
+            c = Color.White;
+        }
         spriteBatch.Draw(padSheet, pos, SrcJumpRing, c, 0f, new Vector2(128, 128), size / 256f * scale, SpriteEffects.None, 0f);
         spriteBatch.Draw(padSheet, pos, SrcBall, c, 0f, new Vector2(88, 88), size * 0.7f / 176f * scale, SpriteEffects.None, 0f);
     }
