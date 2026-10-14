@@ -43,12 +43,13 @@ public class Sonic4Ep1 : Game
     public ContentManager GameContent;
 
     public const int GAME_W = 480;
-    public const int GAME_H = 288;
+    // Resolución original del motor: 480x320 (3:2). Con esta altura los menús y el 3D tienen píxeles cuadrados.
+    public const int GAME_H = 320;
     // Ancho real del render: se calcula según la proporción de la pantalla (ultrawide = más ancho).
-    // Con alto fijo a 288 px el juego no se estira ni se recorta: solo se ve más escenario a los lados.
+    // Con alto fijo a GAME_H el juego no se estira ni se recorta: solo se ve más escenario a los lados.
     public static int RENDER_W = GAME_W;
-    // Ancho máximo del mundo visible (21:9 a 288 px de alto ronda 672; 24:9 ronda 768).
-    public const int MAX_RENDER_W = 800;
+    // Ancho máximo del mundo visible (21:9 a 320 px de alto ronda 746; 24:9 ronda 853).
+    public const int MAX_RENDER_W = 864;
     // Ultrawide sin estirar: el escenario se ensancha según la pantalla, la escala vertical no cambia.
     public const bool ULTRAWIDE_ENABLED = true;
     // Factor de resolución interna: el juego se dibuja a más píxeles y se reduce a la pantalla sin perder nitidez.
@@ -58,6 +59,9 @@ public class Sonic4Ep1 : Game
     private RenderTarget2D gameTarget;
     private Rectangle gameRect;
     private RenderTarget2D blurTarget;
+    private RenderTarget2D softTarget;
+    // Filtro suave tipo "vaselina": el escenario se reduce y se vuelve a estirar (más borroso). Opcional.
+    private bool softFilter;
     private bool prevBackPressed;
 
     // Controles grises del port de Sonic 1 2013 (dibujados encima del pad del motor, que queda oculto).
@@ -66,11 +70,11 @@ public class Sonic4Ep1 : Game
     private Texture2D gearTex;
     // Diseño por defecto (como el de Sonic 2): d-pad abajo a la izquierda y salto abajo a la derecha.
     private const float DefEdge = 68f;
-    private const float DefY = 220f;
+    private const float DefY = 244f;
     private const float DefStickSize = 74f;
     private const float DefJumpSize = 62f;
-    private Vector2 stickCenter = new Vector2(68f, 220f);
-    private Vector2 jumpCenter = new Vector2(412f, 220f);
+    private Vector2 stickCenter = new Vector2(68f, 244f);
+    private Vector2 jumpCenter = new Vector2(412f, 244f);
     private float stickSize = 74f;
     private float jumpSize = 62f;
     private Vector2 stickPos;
@@ -96,11 +100,12 @@ public class Sonic4Ep1 : Game
     // Rectángulos diseñados para 480 px. El engranaje va anclado a la derecha y el resto centrado.
     private static readonly Rectangle GearBase = new Rectangle(438, 52, 32, 32);
     private static readonly Rectangle ListoBase = new Rectangle(190, 8, 100, 28);
-    private static readonly Rectangle MenuPanelBase = new Rectangle(140, 60, 200, 190);
+    private static readonly Rectangle MenuPanelBase = new Rectangle(140, 60, 200, 218);
     private static readonly Rectangle MenuVistaBase = new Rectangle(160, 100, 160, 26);
-    private static readonly Rectangle MenuEditBase = new Rectangle(160, 134, 160, 26);
-    private static readonly Rectangle MenuResetBase = new Rectangle(160, 168, 160, 26);
-    private static readonly Rectangle MenuCloseBase = new Rectangle(160, 202, 160, 26);
+    private static readonly Rectangle MenuSoftBase = new Rectangle(160, 134, 160, 26);
+    private static readonly Rectangle MenuEditBase = new Rectangle(160, 168, 160, 26);
+    private static readonly Rectangle MenuResetBase = new Rectangle(160, 202, 160, 26);
+    private static readonly Rectangle MenuCloseBase = new Rectangle(160, 236, 160, 26);
 
     private static Rectangle ShiftX(Rectangle r, int dx)
     {
@@ -112,6 +117,7 @@ public class Sonic4Ep1 : Game
     private Rectangle ListoRect { get { return ShiftX(ListoBase, CenterDX); } }
     private Rectangle MenuPanel { get { return ShiftX(MenuPanelBase, CenterDX); } }
     private Rectangle MenuVistaRect { get { return ShiftX(MenuVistaBase, CenterDX); } }
+    private Rectangle MenuSoftRect { get { return ShiftX(MenuSoftBase, CenterDX); } }
     private Rectangle MenuEditRect { get { return ShiftX(MenuEditBase, CenterDX); } }
     private Rectangle MenuResetRect { get { return ShiftX(MenuResetBase, CenterDX); } }
     private Rectangle MenuCloseRect { get { return ShiftX(MenuCloseBase, CenterDX); } }
@@ -182,6 +188,7 @@ public class Sonic4Ep1 : Game
         gameTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W * RENDER_SCALE, GAME_H * RENDER_SCALE, false, SurfaceFormat.Color, DepthFormat.Depth24);
         // Versión mínima del frame para hacer el fondo difuminado de los laterales.
         blurTarget = new RenderTarget2D(base.GraphicsDevice, 32, 18, false, SurfaceFormat.Color, DepthFormat.None);
+        softTarget = new RenderTarget2D(base.GraphicsDevice, Math.Max(1, RENDER_W * 3 / 4), GAME_H * 3 / 4, false, SurfaceFormat.Color, DepthFormat.None);
         SetDefaultLayout();
         try
         {
@@ -313,6 +320,14 @@ public class Sonic4Ep1 : Game
         appMain.AppMainLoop();
         GraphicsDevice.SetRenderTarget(null);
         GraphicsDevice.Clear(Color.Black);
+        if (gameTarget != null && softFilter && softTarget != null)
+        {
+            GraphicsDevice.SetRenderTarget(softTarget);
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.LinearClamp, null, null);
+            spriteBatch.Draw(gameTarget, softTarget.Bounds, Color.White);
+            spriteBatch.End();
+            GraphicsDevice.SetRenderTarget(null);
+        }
         if (gameTarget != null)
         {
             // Fondo difuminado: el frame reducido y estirado cubre los laterales sin tocar el juego.
@@ -326,7 +341,7 @@ public class Sonic4Ep1 : Game
             {
                 spriteBatch.Draw(blurTarget, GraphicsDevice.Viewport.Bounds, new Color(110, 110, 110));
             }
-            spriteBatch.Draw(gameTarget, GetGameRect(), Color.White);
+            spriteBatch.Draw(softFilter && softTarget != null ? (Texture2D)softTarget : gameTarget, GetGameRect(), Color.White);
             spriteBatch.End();
             DrawControls(GetGameRect());
             DrawDebug(GetGameRect());
@@ -337,7 +352,7 @@ public class Sonic4Ep1 : Game
     }
 
     // ---------- Controles táctiles: juego, menú del engranaje y edición ----------
-    // Coordenadas del juego (480x288). Se dibuja con una matriz que escala al área del juego en pantalla.
+    // Coordenadas del juego (480x320). Se dibuja con una matriz que escala al área del juego en pantalla.
 
     private static bool InRect(Vector2 p, Rectangle rc)
     {
@@ -386,10 +401,11 @@ public class Sonic4Ep1 : Game
         {
             File.WriteAllLines(LayoutPath, new string[]
             {
-                "ver 2",
+                "ver 3",
                 "jump " + F(jumpCenter.X) + "," + F(jumpCenter.Y) + "," + F(jumpSize),
                 "stick " + F(stickCenter.X) + "," + F(stickCenter.Y) + "," + F(stickSize),
-                "wide " + (wideView ? "1" : "0")
+                "wide " + (wideView ? "1" : "0"),
+                "soft " + (softFilter ? "1" : "0")
             });
         }
         catch (Exception)
@@ -407,8 +423,8 @@ public class Sonic4Ep1 : Game
                 return;
             }
             string[] lines = File.ReadAllLines(LayoutPath);
-            // Disposiciones de versiones anteriores (sin la línea ver 2) se ignoran y se usa el diseño nuevo.
-            bool current = lines.Length > 0 && lines[0] == "ver 2";
+            // Disposiciones de versiones anteriores (sin la línea ver 3) se ignoran y se usa el diseño nuevo.
+            bool current = lines.Length > 0 && lines[0] == "ver 3";
             foreach (string line in lines)
             {
                 string[] p = line.Split(' ');
@@ -419,6 +435,11 @@ public class Sonic4Ep1 : Game
                 if (p[0] == "wide")
                 {
                     wideView = p[1] == "1";
+                    continue;
+                }
+                if (p[0] == "soft")
+                {
+                    softFilter = p[1] == "1";
                     continue;
                 }
                 if (!current)
@@ -635,6 +656,11 @@ public class Sonic4Ep1 : Game
                 wideView = !wideView;
                 SaveLayout();
             }
+            else if (InRect(t.Position, MenuSoftRect))
+            {
+                softFilter = !softFilter;
+                SaveLayout();
+            }
             else if (InRect(t.Position, MenuEditRect))
             {
                 menuOpen = false;
@@ -655,6 +681,7 @@ public class Sonic4Ep1 : Game
     {
         spriteBatch.Draw(pixelTex, MenuPanel, new Color(16, 20, 18, 235));
         DrawButton(MenuVistaRect, wideView ? "Vista: Ancha" : "Vista: Normal");
+        DrawButton(MenuSoftRect, softFilter ? "Filtro: Suave" : "Filtro: Nitido");
         DrawButton(MenuEditRect, "Editar controles");
         DrawButton(MenuResetRect, "Restablecer diseno");
         DrawButton(MenuCloseRect, "Cerrar");
@@ -771,7 +798,7 @@ public class Sonic4Ep1 : Game
         return gameRect;
     }
 
-    // Toques en coordenadas de pantalla -> coordenadas del juego (RENDER_W x 288).
+    // Toques en coordenadas de pantalla -> coordenadas del juego (RENDER_W x GAME_H).
     public TouchCollection GetGameTouches()
     {
         Rectangle r = GetGameRect();

@@ -163994,13 +163994,11 @@ public class AppMain
 	{
 		OpenGL.init(m_game, m_graphicsDevice);
 		// El viewport usa la resolución interna (RENDER_W x 288 multiplicado por RENDER_SCALE).
-		OpenGL.glViewport(0, 0, Sonic4Ep1.RENDER_W * Sonic4Ep1.RENDER_SCALE, 288 * Sonic4Ep1.RENDER_SCALE);
+		OpenGL.glViewport(0, 0, Sonic4Ep1.RENDER_W * Sonic4Ep1.RENDER_SCALE, Sonic4Ep1.GAME_H * Sonic4Ep1.RENDER_SCALE);
 		int num = 480;
 		int num2 = 320;
-		// Ultrawide: el viewport es más ancho, así que el aspect crece con la misma proporción.
-		// Así la escala en píxeles no cambia (no hay zoom ni estiramiento) y se ve más escenario.
 		// nnMakePerspectiveMatrix usa M00 = cot / aspect, así que aspect debe ser ancho/alto del viewport.
-		// Con RENDER_W x 288 se obtienen píxeles cuadrados: sin estirado y sin zoom horizontal.
+		// Con RENDER_W x GAME_H (480x320 en la configuración original) los píxeles son cuadrados.
 		float projAspect = (float)Sonic4Ep1.RENDER_W / (float)Sonic4Ep1.GAME_H;
 		amRenderInit();
 		NNS_MATRIX nNS_MATRIX = GlobalPool<NNS_MATRIX>.Alloc();
