@@ -397,8 +397,8 @@ public class Sonic4Ep1 : Game
         {
             return;
         }
-        // Solo durante la partida: en menús y opciones (is_show_ui) no se dibuja nada.
-        if (AppMain.g_ao_sys_global.is_show_ui)
+        // Solo durante la partida: en el título, menús y opciones no se dibuja nada.
+        if (!AppMain.IsStagePlaying())
         {
             menuOpen = false;
             editing = false;
@@ -475,14 +475,15 @@ public class Sonic4Ep1 : Game
         Color c = new Color(255, 255, 255, 215);
         spriteBatch.Draw(gearTex, GearRect, new Color(255, 255, 255, 190));
         DrawStick(stickCenter, stickPos, c);
-        Rectangle src = jumpHeld ? new Rectangle(58, 68, 54, 54) : new Rectangle(2, 68, 54, 54);
-        spriteBatch.Draw(padSheet, jumpCenter, src, c, 0f, new Vector2(27, 27), jumpSize / 54f * jumpScale, SpriteEffects.None, 0f);
+        Rectangle src = jumpHeld ? new Rectangle(60, 70, 50, 50) : new Rectangle(4, 70, 50, 50);
+        spriteBatch.Draw(padSheet, jumpCenter, src, c, 0f, new Vector2(25, 25), jumpSize / 50f * jumpScale, SpriteEffects.None, 0f);
     }
 
     private void DrawStick(Vector2 basePos, Vector2 knobPos, Color c)
     {
-        spriteBatch.Draw(padSheet, basePos, new Rectangle(2, 2, 64, 64), c, 0f, new Vector2(32, 32), stickSize / 64f, SpriteEffects.None, 0f);
-        spriteBatch.Draw(padSheet, knobPos, new Rectangle(332, 2, 42, 42), c, 0f, new Vector2(21, 21), stickSize * 0.66f / 42f, SpriteEffects.None, 0f);
+        // Se recorta 2 px de cada lado de la hoja para que no se vean bordes del sprite.
+        spriteBatch.Draw(padSheet, basePos, new Rectangle(4, 4, 60, 60), c, 0f, new Vector2(30, 30), stickSize / 60f, SpriteEffects.None, 0f);
+        spriteBatch.Draw(padSheet, knobPos, new Rectangle(334, 4, 38, 38), c, 0f, new Vector2(19, 19), stickSize * 0.66f / 38f, SpriteEffects.None, 0f);
     }
 
     private void HandleMenu(TouchCollection touches)
@@ -587,8 +588,8 @@ public class Sonic4Ep1 : Game
     {
         Color c = new Color(255, 255, 255, 215);
         DrawStick(stickCenter, stickCenter, c);
-        Rectangle src = new Rectangle(2, 68, 54, 54);
-        spriteBatch.Draw(padSheet, jumpCenter, src, c, 0f, new Vector2(27, 27), jumpSize / 54f, SpriteEffects.None, 0f);
+        Rectangle src = new Rectangle(4, 70, 50, 50);
+        spriteBatch.Draw(padSheet, jumpCenter, src, c, 0f, new Vector2(25, 25), jumpSize / 50f, SpriteEffects.None, 0f);
         DrawFrame(new Rectangle((int)(stickCenter.X - stickSize / 2f), (int)(stickCenter.Y - stickSize / 2f), (int)stickSize, (int)stickSize));
         DrawFrame(new Rectangle((int)(jumpCenter.X - jumpSize / 2f), (int)(jumpCenter.Y - jumpSize / 2f), (int)jumpSize, (int)jumpSize));
         spriteBatch.Draw(pixelTex, ListoRect, new Color(191, 232, 138, 235));

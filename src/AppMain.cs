@@ -180595,6 +180595,23 @@ public class AppMain
 		}
 	}
 
+	// Partida activa: hay jugador en escena y no hay interfaz de menú (título, menús y opciones quedan fuera).
+	public static bool IsStagePlaying()
+	{
+		try
+		{
+			if (g_ao_sys_global.is_show_ui || g_gs_main_sys_info.game_mode != 0)
+			{
+				return false;
+			}
+			return g_gm_main_system.ply_work[0] != null;
+		}
+		catch (Exception)
+		{
+			return false;
+		}
+	}
+
 	// Zona de toque del salto (la que lee el motor), en coordenadas del juego.
 	public static void SetJumpKeyRect(int x0, int y0, int x1, int y1)
 	{
