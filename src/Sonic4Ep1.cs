@@ -224,7 +224,8 @@ public class Sonic4Ep1 : Game
             AppMain.back_key_is_pressed = true;
         }
         prevBackPressed = backNow;
-        if (!AppMain.g_ao_sys_global.is_show_ui && inputDataRead)
+        // Los toques se entregan siempre: en el menú principal is_show_ui es verdadero y el menú también los necesita.
+        if (inputDataRead)
         {
             inputDataRead = false;
             dbgOverride = LiveFeature.getInstance().InputOverride();
