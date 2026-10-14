@@ -56,13 +56,17 @@ public class Sonic4Ep1 : Game
     private Texture2D padSheet;
     private Texture2D pixelTex;
     private Texture2D gearTex;
-    private Vector2 stickCenter = new Vector2(62f, 226f);
-    private Vector2 jumpCenter = new Vector2(436f, 264f);
-    private float stickSize = 64f;
-    private float jumpSize = 72f;
+    private Vector2 stickCenter = new Vector2(72f, 212f);
+    private Vector2 jumpCenter = new Vector2(414f, 236f);
+    private float stickSize = 84f;
+    private float jumpSize = 84f;
     private Vector2 stickPos;
     private float jumpScale = 1f;
     private bool jumpHeld;
+    // Hoja nueva (512x512): aro gris con flechas, aro gris liso, bola brillante.
+    private static readonly Rectangle SrcStickRing = new Rectangle(0, 0, 256, 256);
+    private static readonly Rectangle SrcJumpRing = new Rectangle(256, 0, 256, 256);
+    private static readonly Rectangle SrcBall = new Rectangle(12, 322, 176, 176);
     // Diagnóstico de toques (se ve arriba a la izquierda). Poner en false cuando ya no haga falta.
     private const bool DEBUG_TOUCH = true;
     private bool dbgOverride;
@@ -72,7 +76,7 @@ public class Sonic4Ep1 : Game
     private bool wideView = true;
     private int dragId = -1;
     private int dragKind = -1; // 0 mover joystick, 1 mover salto, 2 redimensionar joystick, 3 redimensionar salto
-    private static readonly Rectangle GearRect = new Rectangle(436, 8, 36, 36);
+    private static readonly Rectangle GearRect = new Rectangle(438, 52, 32, 32);
     private static readonly Rectangle ListoRect = new Rectangle(190, 8, 100, 28);
     private static readonly Rectangle MenuPanel = new Rectangle(140, 60, 200, 190);
     private static readonly Rectangle MenuVistaRect = new Rectangle(160, 100, 160, 26);
@@ -143,7 +147,7 @@ public class Sonic4Ep1 : Game
         stickPos = stickCenter;
         try
         {
-            using (var st = TitleContainer.OpenStream("Content/ui/controls_2013.png"))
+            using (var st = TitleContainer.OpenStream("Content/ui/pad_hq.png"))
             {
                 padSheet = Texture2D.FromStream(base.GraphicsDevice, st);
             }
@@ -224,6 +228,17 @@ public class Sonic4Ep1 : Game
             AppMain.back_key_is_pressed = true;
         }
         prevBackPressed = backNow;
+        // El engranaje se detecta aquí, en Update, para no perder el toque si Draw no ve el estado Pressed.
+        if (!menuOpen && !editing && AppMain.IsStagePlaying())
+        {
+            foreach (TouchLocation t in GetGameTouches())
+            {
+                if (t.State == TouchLocationState.Pressed && InRect(t.Position, GearRect))
+                {
+                    menuOpen = true;
+                }
+            }
+        }
         // Los toques se entregan siempre: en el menú principal is_show_ui es verdadero y el menú también los necesita.
         if (inputDataRead)
         {
@@ -392,10 +407,10 @@ public class Sonic4Ep1 : Game
 
     private void ResetLayout()
     {
-        jumpCenter = new Vector2(436f, 264f);
-        jumpSize = 72f;
-        stickCenter = new Vector2(62f, 226f);
-        stickSize = 64f;
+        jumpCenter = new Vector2(414f, 236f);
+        jumpSize = 84f;
+        stickCenter = new Vector2(72f, 212f);
+        stickSize = 84f;
         stickPos = stickCenter;
         SaveLayout();
     }
@@ -505,18 +520,22 @@ public class Sonic4Ep1 : Game
 
     private void DrawPlay()
     {
-        Color c = new Color(255, 255, 255, 215);
+        Color c = new Color(255, 255, 255, 230);
         spriteBatch.Draw(gearTex, GearRect, new Color(255, 255, 255, 190));
         DrawStick(stickCenter, stickPos, c);
-        Rectangle src = jumpHeld ? new Rectangle(60, 70, 50, 50) : new Rectangle(4, 70, 50, 50);
-        spriteBatch.Draw(padSheet, jumpCenter, src, c, 0f, new Vector2(25, 25), jumpSize / 50f * jumpScale, SpriteEffects.None, 0f);
+        DrawJump(jumpCenter, jumpSize, jumpScale, c);
     }
 
     private void DrawStick(Vector2 basePos, Vector2 knobPos, Color c)
     {
-        // Se recorta 2 px de cada lado de la hoja para que no se vean bordes del sprite.
-        spriteBatch.Draw(padSheet, basePos, new Rectangle(4, 4, 60, 60), c, 0f, new Vector2(30, 30), stickSize / 60f, SpriteEffects.None, 0f);
-        spriteBatch.Draw(padSheet, knobPos, new Rectangle(334, 4, 38, 38), c, 0f, new Vector2(19, 19), stickSize * 0.66f / 38f, SpriteEffects.None, 0f);
+        spriteBatch.Draw(padSheet, basePos, SrcStickRing, c, 0f, new Vector2(128, 128), stickSize / 256f, SpriteEffects.None, 0f);
+        spriteBatch.Draw(padSheet, knobPos, SrcBall, c, 0f, new Vector2(88, 88), stickSize * 0.5f / 176f, SpriteEffects.None, 0f);
+    }
+
+    private void DrawJump(Vector2 pos, float size, float scale, Color c)
+    {
+        spriteBatch.Draw(padSheet, pos, SrcJumpRing, c, 0f, new Vector2(128, 128), size / 256f * scale, SpriteEffects.None, 0f);
+        spriteBatch.Draw(padSheet, pos, SrcBall, c, 0f, new Vector2(88, 88), size * 0.7f / 176f * scale, SpriteEffects.None, 0f);
     }
 
     private void HandleMenu(TouchCollection touches)
@@ -619,10 +638,9 @@ public class Sonic4Ep1 : Game
 
     private void DrawEdit()
     {
-        Color c = new Color(255, 255, 255, 215);
+        Color c = new Color(255, 255, 255, 230);
         DrawStick(stickCenter, stickCenter, c);
-        Rectangle src = new Rectangle(4, 70, 50, 50);
-        spriteBatch.Draw(padSheet, jumpCenter, src, c, 0f, new Vector2(25, 25), jumpSize / 50f, SpriteEffects.None, 0f);
+        DrawJump(jumpCenter, jumpSize, 1f, c);
         DrawFrame(new Rectangle((int)(stickCenter.X - stickSize / 2f), (int)(stickCenter.Y - stickSize / 2f), (int)stickSize, (int)stickSize));
         DrawFrame(new Rectangle((int)(jumpCenter.X - jumpSize / 2f), (int)(jumpCenter.Y - jumpSize / 2f), (int)jumpSize, (int)jumpSize));
         spriteBatch.Draw(pixelTex, ListoRect, new Color(191, 232, 138, 235));
