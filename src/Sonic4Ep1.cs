@@ -47,6 +47,7 @@ public class Sonic4Ep1 : Game
     public static int RENDER_W = GAME_W;
     private RenderTarget2D gameTarget;
     private Rectangle gameRect;
+    private RenderTarget2D blurTarget;
 
     protected float deviceMusicVolume;
 
@@ -103,10 +104,11 @@ public class Sonic4Ep1 : Game
         spriteBatch = new SpriteBatch(base.GraphicsDevice);
         // Igual que el widescreen de SMW: la altura se queda en 288 (escala original) y el ancho
         // se toma de la proporción real del área de dibujo. Así no hay zoom ni estiramiento.
-        var pp = GraphicsDevice.PresentationParameters;
-        float screenAspect = pp.BackBufferWidth / (float)pp.BackBufferHeight;
-        RENDER_W = Math.Max(GAME_W, (int)Math.Round(GAME_H * screenAspect));
+        // El juego se dibuja en su resolución original 15:9 (480x288): sin estirar y con la geometría del motor intacta.
+        RENDER_W = GAME_W;
         gameTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W, GAME_H, false, SurfaceFormat.Color, DepthFormat.None);
+        // Versión mínima del frame para hacer el fondo difuminado de los laterales.
+        blurTarget = new RenderTarget2D(base.GraphicsDevice, 32, 18, false, SurfaceFormat.Color, DepthFormat.None);
         fntKootenay = GameContent.Load<SpriteFont>("Kootenay");
         fnts[0] = GameContent.Load<SpriteFont>("small");
         fnts[1] = GameContent.Load<SpriteFont>("medium");
@@ -205,7 +207,14 @@ public class Sonic4Ep1 : Game
         GraphicsDevice.Clear(Color.Black);
         if (gameTarget != null)
         {
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.PointClamp, null, null);
+            // Fondo difuminado: el frame reducido y estirado cubre los laterales sin tocar el juego.
+            GraphicsDevice.SetRenderTarget(blurTarget);
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.LinearClamp, null, null);
+            spriteBatch.Draw(gameTarget, blurTarget.Bounds, Color.White);
+            spriteBatch.End();
+            GraphicsDevice.SetRenderTarget(null);
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.LinearClamp, null, null);
+            spriteBatch.Draw(blurTarget, GraphicsDevice.Viewport.Bounds, new Color(110, 110, 110));
             spriteBatch.Draw(gameTarget, GetGameRect(), Color.White);
             spriteBatch.End();
         }
