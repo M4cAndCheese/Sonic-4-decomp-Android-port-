@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using Android.Util;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -51,6 +52,8 @@ public static class HdTextures
             tex = null;
         }
 
+        // Diagnóstico: ver con "adb logcat -s S4HD" si la textura HD se aplica.
+        Log.Info("S4HD", (tex != null ? "HD aplicada " : "sin HD ") + key.Substring(0, 12) + " (" + offset + ")");
         if (tex != null) cache[key] = tex;
         else missing.Add(key);
         return tex;
