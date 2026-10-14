@@ -180614,6 +180614,33 @@ public class AppMain
 		}
 	}
 
+	// Controles táctiles de la partida: hay jugador en escena, no hay pausa y el modo es el de partida.
+	// No usa is_show_ui: ese flag puede quedar activo tras pausar o reintentar y ocultaba el pad.
+	public static bool IsStageTouchActive()
+	{
+		try
+		{
+			return g_gs_main_sys_info.game_mode == 0 && g_gm_main_system.ply_work[0] != null && gm_pause_tcb == null;
+		}
+		catch (Exception)
+		{
+			return false;
+		}
+	}
+
+	// Texto de diagnóstico (se ve con DEBUG_TOUCH = true en Sonic4Ep1).
+	public static string DebugStageState()
+	{
+		try
+		{
+			return "modo " + g_gs_main_sys_info.game_mode + " ply " + (g_gm_main_system.ply_work[0] != null) + " pausa " + (gm_pause_tcb != null) + " ui " + g_ao_sys_global.is_show_ui;
+		}
+		catch (Exception)
+		{
+			return "sin datos";
+		}
+	}
+
 	// Zona de toque del salto (la que lee el motor), en coordenadas del juego.
 	public static void SetJumpKeyRect(int x0, int y0, int x1, int y1)
 	{

@@ -49,8 +49,8 @@ public class Sonic4Ep1 : Game
     public static int RENDER_W = GAME_W;
     // Ancho máximo del mundo visible (21:9 a 288 px de alto ronda 672; 24:9 ronda 768).
     public const int MAX_RENDER_W = 800;
-    // Ultrawide: false = modo 480x288 sin estirar (con franjas). Ponlo en true para ensanchar el escenario.
-    public const bool ULTRAWIDE_ENABLED = false;
+    // Ultrawide sin estirar: el escenario se ensancha según la pantalla, la escala vertical no cambia.
+    public const bool ULTRAWIDE_ENABLED = true;
     // Factor de resolución interna: el juego se dibuja a más píxeles y se reduce a la pantalla sin perder nitidez.
     public static int RENDER_SCALE = 1;
     // Límite de tamaño de textura del render target (seguro en casi todos los Android).
@@ -64,10 +64,15 @@ public class Sonic4Ep1 : Game
     private Texture2D padSheet;
     private Texture2D pixelTex;
     private Texture2D gearTex;
-    private Vector2 stickCenter = new Vector2(72f, 212f);
-    private Vector2 jumpCenter = new Vector2(414f, 236f);
-    private float stickSize = 120f;
-    private float jumpSize = 84f;
+    // Diseño por defecto (como el de Sonic 2): d-pad abajo a la izquierda y salto abajo a la derecha.
+    private const float DefEdge = 68f;
+    private const float DefY = 220f;
+    private const float DefStickSize = 74f;
+    private const float DefJumpSize = 62f;
+    private Vector2 stickCenter = new Vector2(68f, 220f);
+    private Vector2 jumpCenter = new Vector2(412f, 220f);
+    private float stickSize = 74f;
+    private float jumpSize = 62f;
     private Vector2 stickPos;
     private float jumpScale = 1f;
     private bool jumpHeld;
@@ -88,13 +93,28 @@ public class Sonic4Ep1 : Game
     private bool wideView = true;
     private int dragId = -1;
     private int dragKind = -1; // 0 mover joystick, 1 mover salto, 2 redimensionar joystick, 3 redimensionar salto
-    private static readonly Rectangle GearRect = new Rectangle(438, 52, 32, 32);
-    private static readonly Rectangle ListoRect = new Rectangle(190, 8, 100, 28);
-    private static readonly Rectangle MenuPanel = new Rectangle(140, 60, 200, 190);
-    private static readonly Rectangle MenuVistaRect = new Rectangle(160, 100, 160, 26);
-    private static readonly Rectangle MenuEditRect = new Rectangle(160, 134, 160, 26);
-    private static readonly Rectangle MenuResetRect = new Rectangle(160, 168, 160, 26);
-    private static readonly Rectangle MenuCloseRect = new Rectangle(160, 202, 160, 26);
+    // Rectángulos diseñados para 480 px. El engranaje va anclado a la derecha y el resto centrado.
+    private static readonly Rectangle GearBase = new Rectangle(438, 52, 32, 32);
+    private static readonly Rectangle ListoBase = new Rectangle(190, 8, 100, 28);
+    private static readonly Rectangle MenuPanelBase = new Rectangle(140, 60, 200, 190);
+    private static readonly Rectangle MenuVistaBase = new Rectangle(160, 100, 160, 26);
+    private static readonly Rectangle MenuEditBase = new Rectangle(160, 134, 160, 26);
+    private static readonly Rectangle MenuResetBase = new Rectangle(160, 168, 160, 26);
+    private static readonly Rectangle MenuCloseBase = new Rectangle(160, 202, 160, 26);
+
+    private static Rectangle ShiftX(Rectangle r, int dx)
+    {
+        return new Rectangle(r.X + dx, r.Y, r.Width, r.Height);
+    }
+
+    private int CenterDX { get { return (RENDER_W - GAME_W) / 2; } }
+    private Rectangle GearRect { get { return ShiftX(GearBase, RENDER_W - GAME_W); } }
+    private Rectangle ListoRect { get { return ShiftX(ListoBase, CenterDX); } }
+    private Rectangle MenuPanel { get { return ShiftX(MenuPanelBase, CenterDX); } }
+    private Rectangle MenuVistaRect { get { return ShiftX(MenuVistaBase, CenterDX); } }
+    private Rectangle MenuEditRect { get { return ShiftX(MenuEditBase, CenterDX); } }
+    private Rectangle MenuResetRect { get { return ShiftX(MenuResetBase, CenterDX); } }
+    private Rectangle MenuCloseRect { get { return ShiftX(MenuCloseBase, CenterDX); } }
 
     protected float deviceMusicVolume;
 
@@ -162,7 +182,7 @@ public class Sonic4Ep1 : Game
         gameTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W * RENDER_SCALE, GAME_H * RENDER_SCALE, false, SurfaceFormat.Color, DepthFormat.Depth24);
         // Versión mínima del frame para hacer el fondo difuminado de los laterales.
         blurTarget = new RenderTarget2D(base.GraphicsDevice, 32, 18, false, SurfaceFormat.Color, DepthFormat.None);
-        stickPos = stickCenter;
+        SetDefaultLayout();
         try
         {
             using (var st = TitleContainer.OpenStream("Content/ui/pad_hq.png"))
@@ -248,7 +268,7 @@ public class Sonic4Ep1 : Game
         prevBackPressed = backNow;
         UpdateTouchFrame();
         // El engranaje usa los toques nuevos de este fotograma (no depende del estado Pressed).
-        if (!menuOpen && !editing && AppMain.IsStagePlaying())
+        if (!menuOpen && !editing && AppMain.IsStageTouchActive())
         {
             foreach (TouchLocation t in newTouches)
             {
@@ -366,6 +386,7 @@ public class Sonic4Ep1 : Game
         {
             File.WriteAllLines(LayoutPath, new string[]
             {
+                "ver 2",
                 "jump " + F(jumpCenter.X) + "," + F(jumpCenter.Y) + "," + F(jumpSize),
                 "stick " + F(stickCenter.X) + "," + F(stickCenter.Y) + "," + F(stickSize),
                 "wide " + (wideView ? "1" : "0")
@@ -385,7 +406,10 @@ public class Sonic4Ep1 : Game
             {
                 return;
             }
-            foreach (string line in File.ReadAllLines(LayoutPath))
+            string[] lines = File.ReadAllLines(LayoutPath);
+            // Disposiciones de versiones anteriores (sin la línea ver 2) se ignoran y se usa el diseño nuevo.
+            bool current = lines.Length > 0 && lines[0] == "ver 2";
+            foreach (string line in lines)
             {
                 string[] p = line.Split(' ');
                 if (p.Length < 2)
@@ -395,6 +419,10 @@ public class Sonic4Ep1 : Game
                 if (p[0] == "wide")
                 {
                     wideView = p[1] == "1";
+                    continue;
+                }
+                if (!current)
+                {
                     continue;
                 }
                 string[] v = p[1].Split(',');
@@ -424,13 +452,18 @@ public class Sonic4Ep1 : Game
         }
     }
 
+    private void SetDefaultLayout()
+    {
+        jumpCenter = new Vector2(RENDER_W - DefEdge, DefY);
+        jumpSize = DefJumpSize;
+        stickCenter = new Vector2(DefEdge, DefY);
+        stickSize = DefStickSize;
+        stickPos = stickCenter;
+    }
+
     private void ResetLayout()
     {
-        jumpCenter = new Vector2(414f, 236f);
-        jumpSize = 84f;
-        stickCenter = new Vector2(72f, 212f);
-        stickSize = 120f;
-        stickPos = stickCenter;
+        SetDefaultLayout();
         SaveLayout();
     }
 
@@ -473,7 +506,7 @@ public class Sonic4Ep1 : Game
         {
             info += " juego " + (int)touches[0].Position.X + "," + (int)touches[0].Position.Y + " " + touches[0].State;
         }
-        info += " | ov " + dbgOverride + " ejec " + dbgRan + " ui " + AppMain.g_ao_sys_global.is_show_ui + " partida " + AppMain.IsStagePlaying();
+        info += " | ov " + dbgOverride + " ejec " + dbgRan + " " + AppMain.DebugStageState();
         spriteBatch.DrawString(fntKootenay, info, new Vector2(4, 4), Color.Yellow, 0f, Vector2.Zero, 0.35f, SpriteEffects.None, 0f);
         spriteBatch.End();
     }
@@ -485,7 +518,7 @@ public class Sonic4Ep1 : Game
             return;
         }
         // Solo durante la partida: en el título, menús y opciones no se dibuja nada.
-        if (!AppMain.IsStagePlaying())
+        if (!AppMain.IsStageTouchActive())
         {
             menuOpen = false;
             editing = false;
@@ -551,7 +584,7 @@ public class Sonic4Ep1 : Game
             {
                 jumpHeld = true;
             }
-            else if (t.Position.X < 200f)
+            else if (t.Position.X < RENDER_W * 0.5f)
             {
                 Vector2 d = t.Position - stickCenter;
                 float len = d.Length();
@@ -579,7 +612,7 @@ public class Sonic4Ep1 : Game
     private void DrawStick(Vector2 basePos, Vector2 knobPos, Color c)
     {
         spriteBatch.Draw(padSheet, basePos, SrcStickRing, c, 0f, new Vector2(128, 128), stickSize / 256f, SpriteEffects.None, 0f);
-        spriteBatch.Draw(padSheet, knobPos, SrcBall, c, 0f, new Vector2(88, 88), stickSize * 0.5f / 176f, SpriteEffects.None, 0f);
+        spriteBatch.Draw(padSheet, knobPos, SrcBall, c, 0f, new Vector2(88, 88), stickSize * 0.66f / 176f, SpriteEffects.None, 0f);
     }
 
     private void DrawJump(Vector2 pos, float size, float scale, Color c)
@@ -682,7 +715,7 @@ public class Sonic4Ep1 : Game
             switch (dragKind)
             {
                 case 0:
-                    stickCenter = new Vector2(Clamp(p.X, stickSize / 2f, 260f), Clamp(p.Y, stickSize / 2f, GAME_H - stickSize / 2f));
+                    stickCenter = new Vector2(Clamp(p.X, stickSize / 2f, RENDER_W * 0.5f), Clamp(p.Y, stickSize / 2f, GAME_H - stickSize / 2f));
                     break;
                 case 1:
                     jumpCenter = new Vector2(Clamp(p.X, jumpSize / 2f, RENDER_W - jumpSize / 2f), Clamp(p.Y, jumpSize / 2f, GAME_H - jumpSize / 2f));
