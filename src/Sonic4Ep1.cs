@@ -11,6 +11,8 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Input.Touch;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using Microsoft.Xna.Framework.Media;
 using mpp;
 
@@ -52,10 +54,27 @@ public class Sonic4Ep1 : Game
 
     // Controles grises del port de Sonic 1 2013 (dibujados encima del pad del motor, que queda oculto).
     private Texture2D padSheet;
+    private Texture2D pixelTex;
+    private Texture2D gearTex;
     private Vector2 stickCenter = new Vector2(62f, 226f);
     private Vector2 jumpCenter = new Vector2(436f, 264f);
+    private float stickSize = 64f;
+    private float jumpSize = 72f;
     private Vector2 stickPos;
     private float jumpScale = 1f;
+    private bool jumpHeld;
+    private bool menuOpen;
+    private bool editing;
+    private bool wideView = true;
+    private int dragId = -1;
+    private int dragKind = -1; // 0 mover joystick, 1 mover salto, 2 redimensionar joystick, 3 redimensionar salto
+    private static readonly Rectangle GearRect = new Rectangle(436, 8, 36, 36);
+    private static readonly Rectangle ListoRect = new Rectangle(190, 8, 100, 28);
+    private static readonly Rectangle MenuPanel = new Rectangle(140, 60, 200, 190);
+    private static readonly Rectangle MenuVistaRect = new Rectangle(160, 100, 160, 26);
+    private static readonly Rectangle MenuEditRect = new Rectangle(160, 134, 160, 26);
+    private static readonly Rectangle MenuResetRect = new Rectangle(160, 168, 160, 26);
+    private static readonly Rectangle MenuCloseRect = new Rectangle(160, 202, 160, 26);
 
     protected float deviceMusicVolume;
 
@@ -129,6 +148,10 @@ public class Sonic4Ep1 : Game
         {
             padSheet = null; // Sin la hoja de sprites, el juego usa el pad del motor.
         }
+        pixelTex = new Texture2D(base.GraphicsDevice, 1, 1);
+        pixelTex.SetData(new Color[] { Color.White });
+        gearTex = MakeGear(base.GraphicsDevice, 64);
+        LoadLayout();
         fntKootenay = GameContent.Load<SpriteFont>("Kootenay");
         fnts[0] = GameContent.Load<SpriteFont>("small");
         fnts[1] = GameContent.Load<SpriteFont>("medium");
@@ -237,62 +260,353 @@ public class Sonic4Ep1 : Game
             spriteBatch.End();
             GraphicsDevice.SetRenderTarget(null);
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.LinearClamp, null, null);
-            spriteBatch.Draw(blurTarget, GraphicsDevice.Viewport.Bounds, new Color(110, 110, 110));
+            if (wideView)
+            {
+                spriteBatch.Draw(blurTarget, GraphicsDevice.Viewport.Bounds, new Color(110, 110, 110));
+            }
             spriteBatch.Draw(gameTarget, GetGameRect(), Color.White);
             spriteBatch.End();
-            DrawPadOverlay(GetGameRect());
+            DrawControls(GetGameRect());
         }
         LiveFeature.getInstance().ShowOverride();
         Upsell.drawUpsellScreen();
         base.Draw(gameTime);
     }
 
-    // Dibuja la cruceta y el salto grises (port 2013) con movimiento suave.
-    // Las coordenadas del juego son 480x288; r es el rectángulo donde se dibuja el juego en pantalla.
-    private void DrawPadOverlay(Rectangle r)
+    // ---------- Controles táctiles: juego, menú del engranaje y edición ----------
+    // Coordenadas del juego (480x288). Se dibuja con una matriz que escala al área del juego en pantalla.
+
+    private static bool InRect(Vector2 p, Rectangle rc)
+    {
+        return p.X >= rc.X && p.X <= rc.Right && p.Y >= rc.Y && p.Y <= rc.Bottom;
+    }
+
+    private static float Clamp(float v, float lo, float hi)
+    {
+        return Math.Max(lo, Math.Min(hi, v));
+    }
+
+    private static Texture2D MakeGear(GraphicsDevice gd, int size)
+    {
+        Texture2D t = new Texture2D(gd, size, size);
+        Color[] c = new Color[size * size];
+        float cx = (size - 1) / 2f;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x - cx, dy = y - cx;
+                float r = (float)Math.Sqrt(dx * dx + dy * dy);
+                float ang = (float)Math.Atan2(dy, dx);
+                float outer = Math.Cos(8 * ang) > 0.2 ? size * 0.48f : size * 0.38f;
+                bool solid = r <= outer && r >= size * 0.16f;
+                c[y * size + x] = solid ? new Color(235, 235, 235, 225) : Color.Transparent;
+            }
+        }
+        t.SetData(c);
+        return t;
+    }
+
+    private static string LayoutPath
+    {
+        get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "pad_layout.txt"); }
+    }
+
+    private static string F(float v)
+    {
+        return v.ToString(CultureInfo.InvariantCulture);
+    }
+
+    private void SaveLayout()
+    {
+        try
+        {
+            File.WriteAllLines(LayoutPath, new string[]
+            {
+                "jump " + F(jumpCenter.X) + "," + F(jumpCenter.Y) + "," + F(jumpSize),
+                "stick " + F(stickCenter.X) + "," + F(stickCenter.Y) + "," + F(stickSize),
+                "wide " + (wideView ? "1" : "0")
+            });
+        }
+        catch (Exception)
+        {
+            // Sin almacenamiento: el diseño solo dura mientras la app está abierta.
+        }
+    }
+
+    private void LoadLayout()
+    {
+        try
+        {
+            if (!File.Exists(LayoutPath))
+            {
+                return;
+            }
+            foreach (string line in File.ReadAllLines(LayoutPath))
+            {
+                string[] p = line.Split(' ');
+                if (p.Length < 2)
+                {
+                    continue;
+                }
+                if (p[0] == "wide")
+                {
+                    wideView = p[1] == "1";
+                    continue;
+                }
+                string[] v = p[1].Split(',');
+                if (v.Length < 3)
+                {
+                    continue;
+                }
+                float x = float.Parse(v[0], CultureInfo.InvariantCulture);
+                float y = float.Parse(v[1], CultureInfo.InvariantCulture);
+                float sz = float.Parse(v[2], CultureInfo.InvariantCulture);
+                if (p[0] == "jump")
+                {
+                    jumpCenter = new Vector2(x, y);
+                    jumpSize = sz;
+                }
+                else if (p[0] == "stick")
+                {
+                    stickCenter = new Vector2(x, y);
+                    stickSize = sz;
+                }
+            }
+            stickPos = stickCenter;
+        }
+        catch (Exception)
+        {
+            // Archivo dañado: se usa el diseño por defecto.
+        }
+    }
+
+    private void ResetLayout()
+    {
+        jumpCenter = new Vector2(436f, 264f);
+        jumpSize = 72f;
+        stickCenter = new Vector2(62f, 226f);
+        stickSize = 64f;
+        stickPos = stickCenter;
+        SaveLayout();
+    }
+
+    private void DrawControls(Rectangle r)
     {
         if (padSheet == null)
         {
             return;
         }
+        // Solo durante la partida: en menús y opciones (is_show_ui) no se dibuja nada.
+        if (AppMain.g_ao_sys_global.is_show_ui)
+        {
+            menuOpen = false;
+            editing = false;
+            dragId = -1;
+            return;
+        }
         float k = r.Width / (float)RENDER_W;
+        Matrix m = Matrix.CreateScale(k) * Matrix.CreateTranslation(r.X, r.Y, 0f);
         TouchCollection touches = GetGameTouches();
+
+        // El salto del motor usa la misma zona que se dibuja.
+        AppMain.SetJumpKeyRect(
+            (int)Math.Max(0f, jumpCenter.X - jumpSize / 2f),
+            (int)Math.Max(0f, jumpCenter.Y - jumpSize / 2f),
+            (int)Math.Min(RENDER_W, jumpCenter.X + jumpSize / 2f),
+            (int)Math.Min(GAME_H, jumpCenter.Y + jumpSize / 2f));
+
+        spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, null, null, null, m);
+        if (menuOpen)
+        {
+            HandleMenu(touches);
+            DrawMenu();
+        }
+        else if (editing)
+        {
+            HandleEdit(touches);
+            DrawEdit();
+        }
+        else
+        {
+            HandlePlay(touches);
+            DrawPlay();
+        }
+        spriteBatch.End();
+    }
+
+    private void HandlePlay(TouchCollection touches)
+    {
         Vector2 stickTarget = stickCenter;
-        bool jumpTouched = false;
+        jumpHeld = false;
         foreach (TouchLocation t in touches)
         {
             if (t.State == TouchLocationState.Released || t.State == TouchLocationState.Invalid)
             {
                 continue;
             }
-            if (Vector2.Distance(t.Position, jumpCenter) < 34f)
+            if (t.State == TouchLocationState.Pressed && InRect(t.Position, GearRect))
             {
-                jumpTouched = true;
+                menuOpen = true;
+                continue;
+            }
+            if (Vector2.Distance(t.Position, jumpCenter) < jumpSize / 2f)
+            {
+                jumpHeld = true;
             }
             else if (t.Position.X < 200f)
             {
                 Vector2 d = t.Position - stickCenter;
                 float len = d.Length();
-                if (len > 28f)
+                float R = stickSize * 0.44f;
+                if (len > R)
                 {
-                    d = d / len * 28f;
+                    d = d / len * R;
                 }
                 stickTarget = stickCenter + d;
             }
         }
         stickPos = Vector2.Lerp(stickPos, stickTarget, 0.35f);
-        jumpScale += ((jumpTouched ? 0.92f : 1f) - jumpScale) * 0.3f;
+        jumpScale += ((jumpHeld ? 0.92f : 1f) - jumpScale) * 0.3f;
+    }
 
-        spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, null, null);
+    private void DrawPlay()
+    {
         Color c = new Color(255, 255, 255, 215);
-        Vector2 baseC = new Vector2(r.X, r.Y) + stickCenter * k;
-        spriteBatch.Draw(padSheet, baseC, new Rectangle(2, 2, 64, 64), c, 0f, new Vector2(32, 32), 64f * k / 64f, SpriteEffects.None, 0f);
-        Vector2 knobC = new Vector2(r.X, r.Y) + stickPos * k;
-        spriteBatch.Draw(padSheet, knobC, new Rectangle(332, 2, 42, 42), c, 0f, new Vector2(21, 21), 42f * k / 42f, SpriteEffects.None, 0f);
-        Rectangle jumpSrc = jumpTouched ? new Rectangle(58, 68, 54, 54) : new Rectangle(2, 68, 54, 54);
-        Vector2 jumpC = new Vector2(r.X, r.Y) + jumpCenter * k;
-        spriteBatch.Draw(padSheet, jumpC, jumpSrc, c, 0f, new Vector2(27, 27), 54f * k / 54f * jumpScale, SpriteEffects.None, 0f);
-        spriteBatch.End();
+        spriteBatch.Draw(gearTex, GearRect, new Color(255, 255, 255, 190));
+        DrawStick(stickCenter, stickPos, c);
+        Rectangle src = jumpHeld ? new Rectangle(58, 68, 54, 54) : new Rectangle(2, 68, 54, 54);
+        spriteBatch.Draw(padSheet, jumpCenter, src, c, 0f, new Vector2(27, 27), jumpSize / 54f * jumpScale, SpriteEffects.None, 0f);
+    }
+
+    private void DrawStick(Vector2 basePos, Vector2 knobPos, Color c)
+    {
+        spriteBatch.Draw(padSheet, basePos, new Rectangle(2, 2, 64, 64), c, 0f, new Vector2(32, 32), stickSize / 64f, SpriteEffects.None, 0f);
+        spriteBatch.Draw(padSheet, knobPos, new Rectangle(332, 2, 42, 42), c, 0f, new Vector2(21, 21), stickSize * 0.66f / 42f, SpriteEffects.None, 0f);
+    }
+
+    private void HandleMenu(TouchCollection touches)
+    {
+        foreach (TouchLocation t in touches)
+        {
+            if (t.State != TouchLocationState.Pressed)
+            {
+                continue;
+            }
+            if (InRect(t.Position, MenuVistaRect))
+            {
+                wideView = !wideView;
+                SaveLayout();
+            }
+            else if (InRect(t.Position, MenuEditRect))
+            {
+                menuOpen = false;
+                editing = true;
+            }
+            else if (InRect(t.Position, MenuResetRect))
+            {
+                ResetLayout();
+            }
+            else if (InRect(t.Position, MenuCloseRect))
+            {
+                menuOpen = false;
+            }
+        }
+    }
+
+    private void DrawMenu()
+    {
+        spriteBatch.Draw(pixelTex, MenuPanel, new Color(16, 20, 18, 235));
+        DrawButton(MenuVistaRect, wideView ? "Vista: Ancha" : "Vista: Normal");
+        DrawButton(MenuEditRect, "Editar controles");
+        DrawButton(MenuResetRect, "Restablecer diseno");
+        DrawButton(MenuCloseRect, "Cerrar");
+    }
+
+    private void DrawButton(Rectangle rc, string text)
+    {
+        spriteBatch.Draw(pixelTex, rc, new Color(60, 72, 66, 235));
+        if (fntKootenay != null)
+        {
+            Vector2 size = fntKootenay.MeasureString(text) * 0.55f;
+            Vector2 pos = new Vector2(rc.X + rc.Width / 2f, rc.Y + rc.Height / 2f);
+            spriteBatch.DrawString(fntKootenay, text, pos, Color.White, 0f, size / 0.55f / 2f, 0.55f, SpriteEffects.None, 0f);
+        }
+    }
+
+    private void HandleEdit(TouchCollection touches)
+    {
+        foreach (TouchLocation t in touches)
+        {
+            if (t.State == TouchLocationState.Pressed && dragId == -1)
+            {
+                if (InRect(t.Position, ListoRect))
+                {
+                    editing = false;
+                    SaveLayout();
+                    continue;
+                }
+                Vector2 jh = jumpCenter + new Vector2(jumpSize / 2f, jumpSize / 2f);
+                Vector2 sh = stickCenter + new Vector2(stickSize / 2f, stickSize / 2f);
+                if (Vector2.Distance(t.Position, jh) < 18f) { dragKind = 3; dragId = t.Id; }
+                else if (Vector2.Distance(t.Position, jumpCenter) < jumpSize / 2f) { dragKind = 1; dragId = t.Id; }
+                else if (Vector2.Distance(t.Position, sh) < 18f) { dragKind = 2; dragId = t.Id; }
+                else if (Vector2.Distance(t.Position, stickCenter) < stickSize / 2f) { dragKind = 0; dragId = t.Id; }
+            }
+            if (t.Id != dragId)
+            {
+                continue;
+            }
+            if (t.State == TouchLocationState.Released || t.State == TouchLocationState.Invalid)
+            {
+                dragId = -1;
+                SaveLayout();
+                continue;
+            }
+            Vector2 p = t.Position;
+            switch (dragKind)
+            {
+                case 0:
+                    stickCenter = new Vector2(Clamp(p.X, stickSize / 2f, 260f), Clamp(p.Y, stickSize / 2f, GAME_H - stickSize / 2f));
+                    break;
+                case 1:
+                    jumpCenter = new Vector2(Clamp(p.X, jumpSize / 2f, RENDER_W - jumpSize / 2f), Clamp(p.Y, jumpSize / 2f, GAME_H - jumpSize / 2f));
+                    break;
+                case 2:
+                    stickSize = Clamp(2f * Vector2.Distance(p, stickCenter), 40f, 140f);
+                    break;
+                case 3:
+                    jumpSize = Clamp(2f * Vector2.Distance(p, jumpCenter), 36f, 150f);
+                    break;
+            }
+        }
+        stickPos = stickCenter;
+    }
+
+    private void DrawEdit()
+    {
+        Color c = new Color(255, 255, 255, 215);
+        DrawStick(stickCenter, stickCenter, c);
+        Rectangle src = new Rectangle(2, 68, 54, 54);
+        spriteBatch.Draw(padSheet, jumpCenter, src, c, 0f, new Vector2(27, 27), jumpSize / 54f, SpriteEffects.None, 0f);
+        DrawFrame(new Rectangle((int)(stickCenter.X - stickSize / 2f), (int)(stickCenter.Y - stickSize / 2f), (int)stickSize, (int)stickSize));
+        DrawFrame(new Rectangle((int)(jumpCenter.X - jumpSize / 2f), (int)(jumpCenter.Y - jumpSize / 2f), (int)jumpSize, (int)jumpSize));
+        spriteBatch.Draw(pixelTex, ListoRect, new Color(191, 232, 138, 235));
+        if (fntKootenay != null)
+        {
+            Vector2 size = fntKootenay.MeasureString("Listo") * 0.55f;
+            spriteBatch.DrawString(fntKootenay, "Listo", new Vector2(ListoRect.X + ListoRect.Width / 2f, ListoRect.Y + ListoRect.Height / 2f), new Color(10, 15, 12), 0f, size / 0.55f / 2f, 0.55f, SpriteEffects.None, 0f);
+        }
+    }
+
+    private void DrawFrame(Rectangle rc)
+    {
+        Color col = new Color(191, 232, 138, 220);
+        spriteBatch.Draw(pixelTex, new Rectangle(rc.X, rc.Y, rc.Width, 2), col);
+        spriteBatch.Draw(pixelTex, new Rectangle(rc.X, rc.Bottom - 2, rc.Width, 2), col);
+        spriteBatch.Draw(pixelTex, new Rectangle(rc.X, rc.Y, 2, rc.Height), col);
+        spriteBatch.Draw(pixelTex, new Rectangle(rc.Right - 2, rc.Y, 2, rc.Height), col);
+        spriteBatch.Draw(pixelTex, new Rectangle(rc.Right - 9, rc.Bottom - 9, 10, 10), col);
     }
 
     // Área donde se dibuja el juego. Escala uniforme (sin estirar) y sin recortar:

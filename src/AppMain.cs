@@ -180595,6 +180595,26 @@ public class AppMain
 		}
 	}
 
+	// Zona de toque del salto (la que lee el motor), en coordenadas del juego.
+	public static void SetJumpKeyRect(int x0, int y0, int x1, int y1)
+	{
+		if (gm_player_push_jump_key_rect == null)
+		{
+			return;
+		}
+		for (int i = 0; i < 2; i++)
+		{
+			ushort[] r = gm_player_push_jump_key_rect[i];
+			if (r != null && r.Length >= 4)
+			{
+				r[0] = (ushort)x0;
+				r[1] = (ushort)y0;
+				r[2] = (ushort)x1;
+				r[3] = (ushort)y1;
+			}
+		}
+	}
+
 	private static void screen2real(ref float X, ref float Y)
 	{
 		// Las coordenadas ya llegan en el espacio 480x288 que se dibuja (GetGameTouches).
