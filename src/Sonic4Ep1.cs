@@ -43,8 +43,9 @@ public class Sonic4Ep1 : Game
     public ContentManager GameContent;
 
     public const int GAME_W = 480;
-    // Resolución original del motor: 480x320 (3:2). Con esta altura los menús y el 3D tienen píxeles cuadrados.
-    public const int GAME_H = 320;
+    // Alto lógico del motor: 288 (m_area.bottom = 288 y el 2D usa esta altura).
+    // Con 320 el juego dibujaba solo arriba y quedaba una franja vacía abajo: pantalla achicada.
+    public const int GAME_H = 288;
     // Ancho real del render: se calcula según la proporción de la pantalla (ultrawide = más ancho).
     // Con alto fijo a GAME_H el juego no se estira ni se recorta: solo se ve más escenario a los lados.
     public static int RENDER_W = GAME_W;
@@ -169,6 +170,7 @@ public class Sonic4Ep1 : Game
         Guide.IsScreenSaverEnabled = false;
         LiveFeature.GAME = this;
         LiveFeature.getInstance();
+        TiltSensor.Instance.Start();
         base.Initialize();
     }
 
@@ -225,6 +227,7 @@ public class Sonic4Ep1 : Game
     protected override void OnDeactivated(object sender, EventArgs args)
     {
         AppMain.isForeground = false;
+        TiltSensor.Instance.Stop();
         if (SaveState.saveLater)
         {
             SaveState._saveFile(SaveState.save);
@@ -252,6 +255,7 @@ public class Sonic4Ep1 : Game
     protected override void OnActivated(object sender, EventArgs args)
     {
         AppMain.isForeground = true;
+        TiltSensor.Instance.Start();
         if (storeSystemVolume)
         {
             deviceMusicVolume = MediaPlayer.Volume;
@@ -290,7 +294,7 @@ public class Sonic4Ep1 : Game
             }
         }
         // El engranaje usa los toques nuevos de este fotograma (no depende del estado Pressed).
-        if (!menuOpen && !editing && AppMain.IsStageTouchActive())
+        if (!menuOpen && !editing && AppMain.IsStageTouchActive() && !AppMain.IsSpecialStageNow())
         {
             foreach (TouchLocation t in newTouches)
             {
@@ -311,6 +315,9 @@ public class Sonic4Ep1 : Game
                 AppMain.onTouchEvents();
                 dbgRan = true;
             }
+            // Acelerómetro real: en fases especiales el motor lo usa para girar al inclinar el celular.
+            accel = TiltSensor.Instance.Value;
+            accel.Y *= TiltSensor.SteerSign;
             AppMain.amIPhoneAccelerate(ref accel);
         }
         try
@@ -358,10 +365,15 @@ public class Sonic4Ep1 : Game
                 spriteBatch.Draw(blurTarget, GraphicsDevice.Viewport.Bounds, new Color(110, 110, 110));
             }
             spriteBatch.End();
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, softFilter ? SamplerState.LinearClamp : SamplerState.PointClamp, null, null);
+            // Escala entera: píxeles nítidos. Escala fraccionaria: muestreo lineal para no dejar bordes en diente de sierra.
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, (softFilter || !IsIntegerScale()) ? SamplerState.LinearClamp : SamplerState.PointClamp, null, null);
             spriteBatch.Draw(softFilter && softTarget != null ? (Texture2D)softTarget : gameTarget, GetGameRect(), Color.White);
             spriteBatch.End();
-            DrawControls(GetGameRect());
+            // En fases especiales no hay controles en pantalla: se juega moviendo el celular.
+            if (!AppMain.IsSpecialStageNow())
+            {
+                DrawControls(GetGameRect());
+            }
             DrawDebug(GetGameRect());
         }
         LiveFeature.getInstance().ShowOverride();
@@ -802,6 +814,13 @@ public class Sonic4Ep1 : Game
         spriteBatch.Draw(pixelTex, new Rectangle(rc.X, rc.Y, 2, rc.Height), col);
         spriteBatch.Draw(pixelTex, new Rectangle(rc.Right - 2, rc.Y, 2, rc.Height), col);
         spriteBatch.Draw(pixelTex, new Rectangle(rc.Right - 9, rc.Bottom - 9, 10, 10), col);
+    }
+
+    private bool IsIntegerScale()
+    {
+        Rectangle r = GetGameRect();
+        float s = r.Width / (float)RENDER_W;
+        return Math.Abs(s - Math.Round(s)) < 0.001f;
     }
 
     // Área donde se dibuja el juego. Escala uniforme (sin estirar) y sin recortar:

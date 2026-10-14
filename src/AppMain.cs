@@ -63813,6 +63813,9 @@ public class AppMain
 	private static uint gm_sound_flag;
 
 	private static MTS_TASK_TCB gm_sound_1shot_tcb;
+	// Respaldo por tiempo: si el jingle no avisa que terminó (pasa en Android), la música vuelve sola.
+	private static int gm_sound_1shot_timeout;
+	private const int GMD_SOUND_1UP_JINGLE_RESUME_FRAME = 300;
 
 	private static MTS_TASK_TCB gm_sound_bgm_fade_tcb;
 
@@ -104035,6 +104038,7 @@ public class AppMain
 	{
 		if (ret_last_sound)
 		{
+			gm_sound_1shot_timeout = GMD_SOUND_1UP_JINGLE_RESUME_FRAME;
 			gmSoundPlay1ShotJingle(0u, 0, 0, 0);
 		}
 		else
@@ -104149,7 +104153,12 @@ public class AppMain
 			return;
 		}
 		GMS_SOUND_1SHOT_JINGLE_WORK gMS_SOUND_1SHOT_JINGLE_WORK = (GMS_SOUND_1SHOT_JINGLE_WORK)gm_sound_1shot_tcb.work;
-		if (GsSoundIsBgmStop(gm_sound_jingle_scb))
+		bool timeout = false;
+		if (gm_sound_1shot_timeout > 0 && --gm_sound_1shot_timeout == 0)
+		{
+			timeout = true;
+		}
+		if (timeout || GsSoundIsBgmStop(gm_sound_jingle_scb))
 		{
 			GmSoundStopJingle(0);
 			gm_sound_flag &= 2147483647u;
@@ -104158,6 +104167,10 @@ public class AppMain
 				GmSoundResumeBGMJingle(gMS_SOUND_1SHOT_JINGLE_WORK.bgm_fade_in_frame);
 			}
 			else if (!GsSoundIsBgmStop(gm_sound_bgm_scb) && GsSoundIsBgmPause(gm_sound_bgm_scb))
+			{
+				GmSoundResumeStageBGM(gMS_SOUND_1SHOT_JINGLE_WORK.bgm_fade_in_frame);
+			}
+			else if (timeout)
 			{
 				GmSoundResumeStageBGM(gMS_SOUND_1SHOT_JINGLE_WORK.bgm_fade_in_frame);
 			}
@@ -117685,7 +117698,7 @@ public class AppMain
 				ply_work.is_nudge = true;
 			}
 		}
-		if (GSM_MAIN_STAGE_IS_SPSTAGE() && (g_gs_main_sys_info.game_flag & 0x200) != 0)
+		if (!SPSTAGE_FORCE_TILT && GSM_MAIN_STAGE_IS_SPSTAGE() && (g_gs_main_sys_info.game_flag & 0x200) != 0)
 		{
 			num = g_gm_main_system.polar_diff;
 		}
@@ -163996,9 +164009,9 @@ public class AppMain
 		// El viewport usa la resolución interna (RENDER_W x 288 multiplicado por RENDER_SCALE).
 		OpenGL.glViewport(0, 0, Sonic4Ep1.RENDER_W * Sonic4Ep1.RENDER_SCALE, Sonic4Ep1.GAME_H * Sonic4Ep1.RENDER_SCALE);
 		int num = 480;
-		int num2 = 320;
+		int num2 = Sonic4Ep1.GAME_H;
 		// nnMakePerspectiveMatrix usa M00 = cot / aspect, así que aspect debe ser ancho/alto del viewport.
-		// Con RENDER_W x GAME_H (480x320 en la configuración original) los píxeles son cuadrados.
+		// Con RENDER_W x GAME_H (480x288 en la configuración original) los píxeles son cuadrados.
 		float projAspect = (float)Sonic4Ep1.RENDER_W / (float)Sonic4Ep1.GAME_H;
 		amRenderInit();
 		NNS_MATRIX nNS_MATRIX = GlobalPool<NNS_MATRIX>.Alloc();
@@ -180628,6 +180641,21 @@ public class AppMain
 
 	// Controles táctiles de la partida: hay jugador en escena, no hay pausa y el modo es el de partida.
 	// No usa is_show_ui: ese flag puede quedar activo tras pausar o reintentar y ocultaba el pad.
+	// En fases especiales se juega moviendo el celular (no con el pad táctil).
+	public const bool SPSTAGE_FORCE_TILT = true;
+
+	public static bool IsSpecialStageNow()
+	{
+		try
+		{
+			return GSM_MAIN_STAGE_IS_SPSTAGE();
+		}
+		catch (Exception)
+		{
+			return false;
+		}
+	}
+
 	public static bool IsStageTouchActive()
 	{
 		try
@@ -180782,11 +180810,16 @@ public class AppMain
 				}
 				else
 				{
-					using (MemoryStream stream = new MemoryStream(amb.data, amb.offsets[num2], amb.data.Length - amb.offsets[num2]))
+					// Textura HD (DDS en Content/HD) si existe con este nombre; si no, la PNG original del AMB.
+					texture2D = HdTextures.TryLoadPng(m_game.GraphicsDevice, amb.data, amb.offsets[num2]);
+					if (texture2D == null)
 					{
-						texture2D = Texture2D.FromStream(m_game.GraphicsDevice, stream);
-						amb.buf[num2] = texture2D;
+						using (MemoryStream stream = new MemoryStream(amb.data, amb.offsets[num2], amb.data.Length - amb.offsets[num2]))
+						{
+							texture2D = Texture2D.FromStream(m_game.GraphicsDevice, stream);
+						}
 					}
+					amb.buf[num2] = texture2D;
 				}
 				result = amTextureLoad(arrayPointer, arrayPointer2, filepath, texture2D, 0);
 			}
