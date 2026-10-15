@@ -44,7 +44,14 @@
   Antes el salto tenía diámetro 62 y ancla 68 px.
 - Un `pad_layout.txt` guardado en el dispositivo sigue teniendo prioridad sobre estos valores.
 
-## Escenario aplastado en ultrawide
-- `AppMain.amIPhoneInitNN`: el ancho lógico (`width_2d`, `draw_width`, `disp_width`) usa `Sonic4Ep1.RENDER_W`
-  en lugar de 480. Antes la cámara y el 2D se calculaban con 480 y la escena se veía aplastada.
-- Se quitó `Content/HD/` (texturas HD del iPad). El código de `HdTextures` queda inactivo porque no encuentra archivos.
+
+## Revertido: ancho lógico 2D/cámara
+- `width_2d` se mantiene en 480. La escala vertical de la cámara ortográfica sale de `AMD_SCREEN_2D_WIDTH`; con
+  RENDER_W se achataba la escena y las fases especiales se veían isométricas. La parte horizontal ya se
+  amplía con el aspecto (`AMD_SCREEN_ASPECT` = RENDER_W/GAME_H), así que el ultrawide sigue sin estirar.
+- Pendiente: el aplastado original en la escena (ver captura) no se explica por esta variable.
+
+## Backbuffer con el tamaño real de la pantalla
+- `Sonic4Ep1` (constructor): el backbuffer usa `Display.GetRealMetrics` (tamaño real incluyendo barra de
+  navegación/recorte) en lugar de `Resources.DisplayMetrics`. Si la proporción del backbuffer no coincide con la
+  superficie, Android estira la imagen al presentar: se ve aplastada y con texturas borrosas.

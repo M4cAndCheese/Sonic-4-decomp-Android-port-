@@ -141,7 +141,19 @@ public class Sonic4Ep1 : Game
         GameContent = new GameDataContent(Services);
         graphics = new GraphicsDeviceManager(this);
         // Backbuffer al tamaño real de la pantalla (si no, Android escala 480x288 y mete bandas negras).
-        var dm = Android.App.Application.Context.Resources.DisplayMetrics;
+        // Tamaño REAL de la pantalla (incluye barra de navegación/recorte). Con DisplayMetrics comunes el backbuffer
+        // tiene otra proporción que la superficie y Android lo estira al presentar: escenas aplastadas.
+        var dm = new Android.Util.DisplayMetrics();
+        var wm = Android.Runtime.Extensions.JavaCast<Android.Views.IWindowManager>(
+            Android.App.Application.Context.GetSystemService(Android.Content.Context.WindowService));
+        if (wm != null && wm.DefaultDisplay != null)
+        {
+            wm.DefaultDisplay.GetRealMetrics(dm);
+        }
+        else
+        {
+            dm = Android.App.Application.Context.Resources.DisplayMetrics;
+        }
         graphics.PreferredBackBufferWidth = Math.Max(dm.WidthPixels, dm.HeightPixels);
         graphics.PreferredBackBufferHeight = Math.Min(dm.WidthPixels, dm.HeightPixels);
         graphics.SupportedOrientations = DisplayOrientation.LandscapeLeft;

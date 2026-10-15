@@ -164024,12 +164024,11 @@ public class AppMain
 		nnMakePerspectiveMatrix(nNS_MATRIX, NNM_DEGtoA32(45f), projAspect, 1f, 10000f);
 		_am_draw_video.draw_aspect = projAspect;
 		nnSetProjection(nNS_MATRIX, 0);
-		// Ancho lógico = RENDER_W (ultrawide real), no 480: con 480 la cámara y el 2D quedaban aplastados.
-		_am_draw_video.draw_width = Sonic4Ep1.RENDER_W;
+		_am_draw_video.draw_width = num;
 		_am_draw_video.draw_height = num2;
-		_am_draw_video.disp_width = Sonic4Ep1.RENDER_W;
+		_am_draw_video.disp_width = num;
 		_am_draw_video.disp_height = num2;
-		_am_draw_video.width_2d = Sonic4Ep1.RENDER_W;
+		_am_draw_video.width_2d = num;
 		_am_draw_video.height_2d = num2;
 		_am_draw_video.scale_x_2d = 1f;
 		_am_draw_video.scale_y_2d = 1f;
