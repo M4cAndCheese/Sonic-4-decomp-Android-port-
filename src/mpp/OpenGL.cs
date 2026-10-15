@@ -2581,7 +2581,9 @@ public sealed class OpenGL
         m_clearColor.R = (byte)(255f * Clamp(red, 0f, 1f));
         m_clearColor.G = (byte)(255f * Clamp(green, 0f, 1f));
         m_clearColor.B = (byte)(255f * Clamp(blue, 0f, 1f));
-        m_clearColor.A = (byte)(255f * Clamp(alpha, 0f, 1f));
+        // Alfa 0: lo que el nivel no dibuja (franjas de los laterales en ultrawide) queda transparente
+        // y se ve el fondo difuminado de Sonic4Ep1, en lugar de un color plano que corta el escenario.
+        m_clearColor.A = 0;
     }
 
     public static void glClearDepth(double depth)
