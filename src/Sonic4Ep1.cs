@@ -68,6 +68,14 @@ public class Sonic4Ep1 : Game
     // Controles grises del port de Sonic 1 2013 (dibujados encima del pad del motor, que queda oculto).
     private Texture2D padSheet;
     private string padError;
+    // Escala 3D ajustable desde el engranaje (1.00 = la del motor sin corrección extra).
+    private static readonly float[] Scale3DSteps = { 1f, 0.9f, 0.8f, 0.7f, 0.6f, 1.1f, 1.2f };
+    private int scale3DIndex = 0;
+    // Pausa por toque: se ignora un rato después de volver de la pausa o al empezar la partida.
+    private int pauseCooldown;
+    private bool wasStageActive;
+    // Cuándo se desactivó la app: paneles del sistema (volumen, no molestar) no deben pausar el juego.
+    private DateTime deactivatedAt = DateTime.MinValue;
     private Texture2D pixelTex;
     private Texture2D gearTex;
     // Diseño por defecto, medido de la captura del dispositivo (coordenadas del motor, alto GAME_H = 320).
@@ -104,12 +112,13 @@ public class Sonic4Ep1 : Game
     // Rectángulos diseñados para 480 px. El engranaje va anclado a la derecha y el resto centrado.
     private static readonly Rectangle GearBase = new Rectangle(438, 52, 32, 32);
     private static readonly Rectangle ListoBase = new Rectangle(190, 8, 100, 28);
-    private static readonly Rectangle MenuPanelBase = new Rectangle(140, 60, 200, 218);
+    private static readonly Rectangle MenuPanelBase = new Rectangle(140, 60, 200, 252);
     private static readonly Rectangle MenuVistaBase = new Rectangle(160, 100, 160, 26);
     private static readonly Rectangle MenuSoftBase = new Rectangle(160, 134, 160, 26);
     private static readonly Rectangle MenuEditBase = new Rectangle(160, 168, 160, 26);
     private static readonly Rectangle MenuResetBase = new Rectangle(160, 202, 160, 26);
     private static readonly Rectangle MenuCloseBase = new Rectangle(160, 236, 160, 26);
+    private static readonly Rectangle MenuScaleBase = new Rectangle(160, 270, 160, 26);
 
     private Rectangle PauseRect { get { return new Rectangle(RENDER_W / 2 - 58, 0, 116, 60); } }
 
@@ -127,6 +136,7 @@ public class Sonic4Ep1 : Game
     private Rectangle MenuEditRect { get { return ShiftX(MenuEditBase, CenterDX); } }
     private Rectangle MenuResetRect { get { return ShiftX(MenuResetBase, CenterDX); } }
     private Rectangle MenuCloseRect { get { return ShiftX(MenuCloseBase, CenterDX); } }
+    private Rectangle MenuScaleRect { get { return ShiftX(MenuScaleBase, CenterDX); } }
 
     protected float deviceMusicVolume;
 
@@ -244,6 +254,7 @@ public class Sonic4Ep1 : Game
     protected override void OnDeactivated(object sender, EventArgs args)
     {
         AppMain.isForeground = false;
+        deactivatedAt = DateTime.UtcNow;
         TiltSensor.Instance.Stop();
         if (SaveState.saveLater)
         {
@@ -277,7 +288,9 @@ public class Sonic4Ep1 : Game
         {
             deviceMusicVolume = MediaPlayer.Volume;
         }
-        if ((AppMain.g_gm_main_system.game_flag & 0x40) == 0)
+        // Solo pausa si la app estuvo realmente fuera (más de 1.5 s); los paneles del sistema no pausan.
+        bool realSwitch = deactivatedAt == DateTime.MinValue || (DateTime.UtcNow - deactivatedAt).TotalSeconds > 1.5;
+        if (realSwitch && (AppMain.g_gm_main_system.game_flag & 0x40) == 0)
         {
             AppMain.g_pause_flag = true;
         }
@@ -300,13 +313,25 @@ public class Sonic4Ep1 : Game
         UpdateTouchFrame();
         // Botón de pausa del HUD (centrado arriba). La zona fija del motor no coincide con el ultrawide,
         // así que aquí se detecta el toque y se pide la pausa directamente.
-        if (!menuOpen && !editing && AppMain.IsStageTouchActive())
+        bool stageActive = !menuOpen && !editing && AppMain.IsStageTouchActive();
+        if (pauseCooldown > 0)
+        {
+            pauseCooldown--;
+        }
+        // Al empezar la partida o al volver de la pausa, los toques no cuentan como pausa durante un momento.
+        if (stageActive && !wasStageActive)
+        {
+            pauseCooldown = 45;
+        }
+        wasStageActive = stageActive;
+        if (stageActive && pauseCooldown == 0)
         {
             foreach (TouchLocation t in newTouches)
             {
                 if (InRect(t.Position, PauseRect))
                 {
                     AppMain.g_pause_flag = true;
+                    pauseCooldown = 60;
                 }
             }
         }
@@ -452,7 +477,8 @@ public class Sonic4Ep1 : Game
                 "jump " + F(RENDER_W - jumpCenter.X) + "," + F(jumpCenter.Y) + "," + F(jumpSize),
                 "stick " + F(stickCenter.X) + "," + F(stickCenter.Y) + "," + F(stickSize),
                 "wide " + (wideView ? "1" : "0"),
-                "soft " + (softFilter ? "1" : "0")
+                "soft " + (softFilter ? "1" : "0"),
+                "k3d " + F(Scale3DSteps[scale3DIndex])
             });
         }
         catch (Exception)
@@ -488,6 +514,19 @@ public class Sonic4Ep1 : Game
                 if (p[0] == "soft")
                 {
                     softFilter = p[1] == "1";
+                    continue;
+                }
+                if (p[0] == "k3d")
+                {
+                    float k;
+                    if (float.TryParse(p[1], NumberStyles.Float, CultureInfo.InvariantCulture, out k))
+                    {
+                        for (int i = 0; i < Scale3DSteps.Length; i++)
+                        {
+                            if (Math.Abs(Scale3DSteps[i] - k) < 0.001f) { scale3DIndex = i; }
+                        }
+                        OpenGL.Scale3D = Scale3DSteps[scale3DIndex];
+                    }
                     continue;
                 }
                 if (!current)
@@ -748,6 +787,13 @@ public class Sonic4Ep1 : Game
             {
                 ResetLayout();
             }
+            else if (InRect(t.Position, MenuScaleRect))
+            {
+                scale3DIndex = (scale3DIndex + 1) % Scale3DSteps.Length;
+                OpenGL.Scale3D = Scale3DSteps[scale3DIndex];
+                OpenGL.ReapplyProjectionAspect();
+                SaveLayout();
+            }
             else if (InRect(t.Position, MenuCloseRect))
             {
                 menuOpen = false;
@@ -762,6 +808,7 @@ public class Sonic4Ep1 : Game
         DrawButton(MenuSoftRect, softFilter ? "Filtro: Suave" : "Filtro: Nitido");
         DrawButton(MenuEditRect, "Editar controles");
         DrawButton(MenuResetRect, "Restablecer diseno");
+        DrawButton(MenuScaleRect, "Escala 3D " + Scale3DSteps[scale3DIndex].ToString("0.00", CultureInfo.InvariantCulture));
         DrawButton(MenuCloseRect, "Cerrar");
     }
 

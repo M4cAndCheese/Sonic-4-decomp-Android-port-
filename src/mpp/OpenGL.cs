@@ -2330,13 +2330,29 @@ public sealed class OpenGL
     // Ahora es 1.0: píxeles cuadrados. Si algo sigue viéndose mal, prueba aquí otro valor.
     private const float PROJ_Y_SCALE = 1.0f;
     private static Matrix PROJECTION_CORRECTION;
+    // Corrección sin el aspecto (la usa el 2D, que ya viene con píxeles correctos).
+    private static Matrix PROJECTION_CORRECTION_2D;
+    // true para 3D (aplica la corrección de aspecto), false para 2D. Lo fija AppMain.nnSetProjection.
+    public static bool projCorrection3D = true;
+
+    private static Matrix CurrentCorrection()
+    {
+        return projCorrection3D ? PROJECTION_CORRECTION : PROJECTION_CORRECTION_2D;
+    }
 
     // Corrige la rotación de PROJECTION_CORRECTION para que los píxeles 3D sean cuadrados con el aspecto real
     // (ancho/alto). Escala la horizontal de pantalla por 1/aspect y la vertical por aspect; la escala del
     // juego (cámara y alto) no cambia.
+    // Escala extra solo del 3D (la fija el menú del engranaje, "Escala 3D").
+    public static float Scale3D = 1f;
+    public static void ReapplyProjectionAspect() { SetProjectionAspect(lastAspect); }
+    private static float lastAspect = 1.5f;
+
     public static void SetProjectionAspect(float aspect)
     {
-        PROJECTION_CORRECTION = Matrix.CreateRotationZ((float)Math.PI / 2f) * Matrix.CreateScale(1f / aspect, aspect * PROJ_Y_SCALE, 0.5f) * Matrix.CreateTranslation(0f, 0f, 0.5f);
+        lastAspect = aspect;
+        PROJECTION_CORRECTION = Matrix.CreateRotationZ((float)Math.PI / 2f) * Matrix.CreateScale(Scale3D / aspect, Scale3D * aspect * PROJ_Y_SCALE, 0.5f) * Matrix.CreateTranslation(0f, 0f, 0.5f);
+        PROJECTION_CORRECTION_2D = Matrix.CreateRotationZ((float)Math.PI / 2f) * Matrix.CreateScale(1f, PROJ_Y_SCALE, 0.5f) * Matrix.CreateTranslation(0f, 0f, 0.5f);
     }
 
     private static VertexPosTexColNorm[][] m_vertices;
@@ -2979,7 +2995,7 @@ public sealed class OpenGL
     {
         drawArraysCalls[drawArraysCallsCount].isPending = true;
         drawArraysCalls[drawArraysCallsCount].view = Matrix.Identity;
-        drawArraysCalls[drawArraysCallsCount].projection = m_projectionMatrixStack.Peek() * PROJECTION_CORRECTION;
+        drawArraysCalls[drawArraysCallsCount].projection = m_projectionMatrixStack.Peek() * CurrentCorrection();
         drawArraysCalls[drawArraysCallsCount].alphaTestEnabled = m_alphaTestEnabled;
         drawArraysCalls[drawArraysCallsCount].normalArrayEnabled = m_normalArrayEnabled;
         drawArraysCalls[drawArraysCallsCount].vertexColorEnabled = m_vertexColorEnabled;
@@ -3265,7 +3281,7 @@ public sealed class OpenGL
         effect.AlphaFunction = m_alphaFunction;
         effect.ReferenceAlpha = m_alphaRef;
         effect.View = m_modelViewMatrixStack.Peek();
-        effect.Projection = m_projectionMatrixStack.Peek() * PROJECTION_CORRECTION;
+        effect.Projection = m_projectionMatrixStack.Peek() * CurrentCorrection();
         effect.FogEnabled = m_fogEnabled && 9729 == m_fogMode;
         effect.FogColor = m_fogColor;
         effect.FogStart = m_fogStart;
@@ -3309,7 +3325,7 @@ public sealed class OpenGL
     private static void setupEffect<TEffect>(TEffect effect) where TEffect : Effect, IEffectMatrices, IEffectLights, IEffectFog
     {
         effect.View = m_modelViewMatrixStack.Peek();
-        effect.Projection = m_projectionMatrixStack.Peek() * PROJECTION_CORRECTION;
+        effect.Projection = m_projectionMatrixStack.Peek() * CurrentCorrection();
         effect.FogEnabled = m_fogEnabled && 9729 == m_fogMode;
         effect.FogColor = m_fogColor;
         effect.FogStart = m_fogStart;
