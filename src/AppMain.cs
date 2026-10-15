@@ -64020,6 +64020,8 @@ public class AppMain
 	public static uint[] g_dm_act_id_tbl_loading;
 
 	private static DMS_LOADING_MGR dm_loading_mgr_p;
+	// true mientras la tarea LOADING_MAIN está viva (pantalla de carga visible).
+	private static bool dm_loading_active;
 
 	private static AMS_AMB_HEADER dm_loading_arc_amb;
 
@@ -112118,6 +112120,7 @@ public class AppMain
 	private static void dmLoadingInit()
 	{
 		dm_loading_mgr_p.tcb = mtTaskMake(dmLoadingProcMain, dmLoadingDest, 0u, 32767, 8192u, 10, () => new DMS_LOADING_MAIN_WORK(), "LOADING_MAIN");
+		dm_loading_active = true;
 		DMS_LOADING_MAIN_WORK dMS_LOADING_MAIN_WORK = (DMS_LOADING_MAIN_WORK)dm_loading_mgr_p.tcb.work;
 		dMS_LOADING_MAIN_WORK.draw_state = (AoActSysGetDrawStateEnable() ? 1u : 0u);
 		AoActSysSetDrawStateEnable(dMS_LOADING_MAIN_WORK.draw_state == 1);
@@ -112166,6 +112169,7 @@ public class AppMain
 
 	private static void dmLoadingDest(MTS_TASK_TCB tcb)
 	{
+		dm_loading_active = false;
 	}
 
 	private static void dmLoadingProcInit(DMS_LOADING_MAIN_WORK main_work)
@@ -180674,6 +180678,10 @@ public class AppMain
 		try
 		{
 			short evt = SyGetEvtInfo().cur_evt_id;
+			if (dm_loading_active)
+			{
+				return true;
+			}
 			return evt == (short)GSE_EVT_ID.GSD_EVT_ID_SYS_INIT || evt == (short)GSE_EVT_ID.GSD_EVT_ID_LOGO_SEGA || evt == (short)GSE_EVT_ID.GSD_EVT_ID_LOGO_SONIC;
 		}
 		catch (Exception)

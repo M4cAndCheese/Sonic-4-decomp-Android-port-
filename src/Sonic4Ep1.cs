@@ -410,12 +410,29 @@ public class Sonic4Ep1 : Game
             spriteBatch.Draw(gameTarget, blurTarget.Bounds, Color.White);
             spriteBatch.End();
             GraphicsDevice.SetRenderTarget(null);
+            // En pantallas de arranque el fondo se ve a brillo completo y no hay fondo difuminado tapando los laterales.
+            bool boot = AppMain.IsBootScreenNow();
             // El fondo difuminado usa muestreo lineal (es borroso a propósito); la capa del juego usa el modo elegido.
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.LinearClamp, null, null);
-            // En pantallas de arranque el fondo se ve a brillo completo: los laterales toman el color real del logo o de la carga.
-            bool boot = AppMain.IsBootScreenNow();
             spriteBatch.Draw(blurTarget, GraphicsDevice.Viewport.Bounds, (wideView && !boot) ? new Color(110, 110, 110) : Color.White);
             spriteBatch.End();
+            // Pantallas de arranque y carga: el contenido de 480 px se extiende a los laterales repitiendo su borde
+            // izquierdo y derecho (barra negra/azul de la carga, fondo blanco del logo), sin el fondo difuminado.
+            if (boot)
+            {
+                Rectangle bb = GetBaseRect();
+                float k = bb.Width / (float)RENDER_W;
+                int side = (int)Math.Round(CenterDX * k);
+                if (side > 0)
+                {
+                    int leftCol = CenterDX * RENDER_SCALE + 1;
+                    int rightCol = (CenterDX + GAME_W) * RENDER_SCALE - 2;
+                    spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.LinearClamp, null, null);
+                    spriteBatch.Draw(gameTarget, new Rectangle(bb.X, bb.Y, side, bb.Height), new Rectangle(leftCol, 0, 1, gameTarget.Height), Color.White);
+                    spriteBatch.Draw(gameTarget, new Rectangle(bb.X + bb.Width - side, bb.Y, side, bb.Height), new Rectangle(rightCol, 0, 1, gameTarget.Height), Color.White);
+                    spriteBatch.End();
+                }
+            }
             // Escala entera: píxeles nítidos. Escala fraccionaria: muestreo lineal para no dejar bordes en diente de sierra.
             // AlphaBlend: las zonas sin nivel son transparentes y dejan ver el fondo difuminado de los laterales.
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, (softFilter || !IsIntegerScale()) ? SamplerState.LinearClamp : SamplerState.PointClamp, null, null);
