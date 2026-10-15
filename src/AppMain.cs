@@ -141114,11 +141114,11 @@ public class AppMain
 			oBS_CAMERA.command_state = 1u;
 			if (2 == num)
 			{
-				oBS_CAMERA.fovy = NNM_DEGtoA32(40f);
+				oBS_CAMERA.fovy = NNM_DEGtoA32(45f);
 			}
 			else
 			{
-				oBS_CAMERA.fovy = NNM_DEGtoA32(40f);
+				oBS_CAMERA.fovy = NNM_DEGtoA32(45f);
 			}
 			oBS_CAMERA.znear = 0.1f;
 			oBS_CAMERA.zfar = 32768f;
