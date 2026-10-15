@@ -412,13 +412,11 @@ public class Sonic4Ep1 : Game
             GraphicsDevice.SetRenderTarget(null);
             // El fondo difuminado usa muestreo lineal (es borroso a propósito); la capa del juego usa el modo elegido.
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.LinearClamp, null, null);
-            if (wideView)
-            {
-                spriteBatch.Draw(blurTarget, GraphicsDevice.Viewport.Bounds, new Color(110, 110, 110));
-            }
+            spriteBatch.Draw(blurTarget, GraphicsDevice.Viewport.Bounds, wideView ? new Color(110, 110, 110) : Color.White);
             spriteBatch.End();
             // Escala entera: píxeles nítidos. Escala fraccionaria: muestreo lineal para no dejar bordes en diente de sierra.
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, (softFilter || !IsIntegerScale()) ? SamplerState.LinearClamp : SamplerState.PointClamp, null, null);
+            // AlphaBlend: las zonas sin nivel son transparentes y dejan ver el fondo difuminado de los laterales.
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, (softFilter || !IsIntegerScale()) ? SamplerState.LinearClamp : SamplerState.PointClamp, null, null);
             spriteBatch.Draw(softFilter && softTarget != null ? (Texture2D)softTarget : gameTarget, GetGameRect(), Color.White);
             spriteBatch.End();
             // En fases especiales no hay controles en pantalla: se juega moviendo el celular.
