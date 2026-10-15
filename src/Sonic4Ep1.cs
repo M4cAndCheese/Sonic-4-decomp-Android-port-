@@ -132,7 +132,7 @@ public class Sonic4Ep1 : Game
     }
 
     private int CenterDX { get { return (RENDER_W - GAME_W) / 2; } }
-    private Rectangle GearRect { get { return ShiftX(GearBase, (int)Math.Round(RENDER_W - GAME_W - CROP_RIGHT)); } }
+    private Rectangle GearRect { get { return ShiftX(GearBase, (int)Math.Round(RENDER_W - GAME_W - CurCropR)); } }
     private Rectangle ListoRect { get { return ShiftX(ListoBase, CenterDX); } }
     private Rectangle MenuPanel { get { return ShiftX(MenuPanelBase, CenterDX); } }
     private Rectangle MenuVistaRect { get { return ShiftX(MenuVistaBase, CenterDX); } }
@@ -942,15 +942,23 @@ public class Sonic4Ep1 : Game
     // aquí se amplía el área lógica (culling/scroll) para que el nivel y el fondo llenen los laterales.
     public static float WideExtra2D { get { return (RENDER_W - GAME_W) / 2f; } }
 
+    // El zoom solo aplica durante la partida. Título, menús y logos usan el marco completo, sin recorte.
+    private float CurCropL { get { return AppMain.IsStageTouchActive() ? CROP_LEFT : 0f; } }
+    private float CurCropR { get { return AppMain.IsStageTouchActive() ? CROP_RIGHT : 0f; } }
+
     public Rectangle GetGameRect()
     {
         Viewport vp = GraphicsDevice.Viewport;
-        float visibleW = RENDER_W - CROP_LEFT - CROP_RIGHT;
+        bool play = AppMain.IsStageTouchActive();
+        float cl = CurCropL;
+        float cr = CurCropR;
+        float visibleW = RENDER_W - cl - cr;
         float scale = Math.Max(vp.Width / visibleW, vp.Height / (float)GAME_H);
         int w = (int)Math.Round(RENDER_W * scale);
         int h = (int)Math.Round(GAME_H * scale);
-        int x = (int)Math.Round(-CROP_LEFT * scale);
-        int y = -(int)Math.Round(CAM_TOP_UNITS * scale);
+        int x = (int)Math.Round(-cl * scale);
+        // En partida la cámara se fija arriba (CAM_TOP_UNITS); fuera de partida se centra vertical como antes.
+        int y = play ? -(int)Math.Round(CAM_TOP_UNITS * scale) : (vp.Height - h) / 2;
         gameRect = new Rectangle(x, y, w, h);
         return gameRect;
     }
