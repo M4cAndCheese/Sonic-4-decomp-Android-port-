@@ -73235,7 +73235,7 @@ public class AppMain
 		oBS_CAMERA.aspect = AMD_SCREEN_ASPECT;
 		oBS_CAMERA.fovy = NNM_DEGtoA32(45f);
 		nnMakePerspectiveMatrix(oBS_CAMERA.prj_pers_mtx, oBS_CAMERA.fovy, oBS_CAMERA.aspect, oBS_CAMERA.znear, oBS_CAMERA.zfar);
-		oBS_CAMERA.scale = 5f / 64f;
+		oBS_CAMERA.scale = 5f / 64f * CAMERA_ZOOM;
 		float num2 = g_obj.disp_height * oBS_CAMERA.scale * 0.5f * 1f;
 		// El aspecto ensancha el eje horizontal (top/bottom); el vertical queda como en el juego original.
 		float num3 = num2 * oBS_CAMERA.aspect;
@@ -82008,6 +82008,8 @@ public class AppMain
 
 	// Zona del botón de pausa (coordenadas del juego). La fija Sonic4Ep1 para que coincida con el botón dibujado.
 	public static uint pauseKeyX = 215u;
+	// Zoom de la cámara del juego: menor = más cerca. 0.9 acerca un 10%.
+	public const float CAMERA_ZOOM = 0.9f;
 
 	private static int GmMainKeyCheckPauseKeyOn()
 	{
@@ -82619,7 +82621,7 @@ public class AppMain
 			OBS_CAMERA oBS_CAMERA = ObjCameraGet(i);
 			if (oBS_CAMERA != null)
 			{
-				oBS_CAMERA.scale = gMS_MAIN_SYSTEM.camera_scale;
+				oBS_CAMERA.scale = gMS_MAIN_SYSTEM.camera_scale * CAMERA_ZOOM;
 			}
 		}
 	}
@@ -87304,7 +87306,7 @@ public class AppMain
 				break;
 			case 1:
 			{
-				float num = 5f / 64f;
+				float num = 5f / 64f * CAMERA_ZOOM;
 				float num2 = g_obj.disp_height * num * 0.5f;
 				float num3 = num2 * nNS_CAMERA_TARGET_ROLL.Aspect;
 				nnMakeOrthoMatrix(nNS_MATRIX2, 0f - num2, num2, 0f - num3, num3, nNS_CAMERA_TARGET_ROLL.ZNear, nNS_CAMERA_TARGET_ROLL.ZFar);

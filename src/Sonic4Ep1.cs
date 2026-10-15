@@ -62,7 +62,8 @@ public class Sonic4Ep1 : Game
     private RenderTarget2D blurTarget;
     private RenderTarget2D softTarget;
     // Filtro suave tipo "vaselina": el escenario se reduce y se vuelve a estirar (más borroso). Opcional.
-    private bool softFilter;
+    // Suavizado activo por defecto: evita el pixelado al escalar a la pantalla.
+    private bool softFilter = true;
     private bool prevBackPressed;
 
     // Controles grises del port de Sonic 1 2013 (dibujados encima del pad del motor, que queda oculto).
@@ -219,7 +220,8 @@ public class Sonic4Ep1 : Game
         // Ultra HD: 2x la altura de la pantalla, limitado por MAX_TARGET_DIM.
         // Render a resolución nativa (480x320): los assets del motor son de esa resolución. Con muestreo de píxel
         // cercano (modo nítido) el escalado a la pantalla se ve como pixel art; con filtro suave se mezcla.
-        RENDER_SCALE = 1;
+        // Render al doble de resolución interna: se reduce a la pantalla con menos pixelado.
+        RENDER_SCALE = 2;
         gameTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W * RENDER_SCALE, GAME_H * RENDER_SCALE, false, SurfaceFormat.Color, DepthFormat.Depth24);
         AppMain.pauseKeyX = (uint)PauseRect.X;
         // Versión mínima del frame para hacer el fondo difuminado de los laterales.
