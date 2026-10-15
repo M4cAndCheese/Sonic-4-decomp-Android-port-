@@ -128261,6 +128261,10 @@ public class AppMain
 		nngProjectionMatrix.Assign(mtx);
 		nngProjectionType = type;
 		nnSetClipPlane();
+		// type 0 = 3D (aplica la corrección de aspecto), type 1 = 2D (ortho ya en píxeles cuadrados).
+		// Antes el flag nunca se cambiaba, así que el 2D (niveles, fondos, HUD, menús) recibía la
+		// corrección 3D y quedaba estirado. Ahora cada proyección usa su propia corrección.
+		OpenGL.projCorrection3D = (type == 0);
 		nnLoadProjectionMatrixGL(mtx);
 	}
 
