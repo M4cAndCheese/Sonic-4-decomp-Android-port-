@@ -435,22 +435,27 @@ public class Sonic4Ep1 : Game
             }
             // Escala entera: píxeles nítidos. Escala fraccionaria: muestreo lineal para no dejar bordes en diente de sierra.
             // AlphaBlend: las zonas sin nivel son transparentes y dejan ver el fondo difuminado de los laterales.
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, (softFilter || !IsIntegerScale()) ? SamplerState.LinearClamp : SamplerState.PointClamp, null, null);
-            spriteBatch.Draw(softFilter && softTarget != null ? (Texture2D)softTarget : gameTarget, GetGameRect(), Color.White);
-            spriteBatch.End();
-            // HUD sin zoom: la franja superior del nivel (anillos, puntaje, tiempo, vidas, pausa) se vuelve a dibujar
-            // desde el render sin ampliar, así que no cambia de tamaño ni de posición.
+            SamplerState gameSampler = (softFilter || !IsIntegerScale()) ? SamplerState.LinearClamp : SamplerState.PointClamp;
+            Texture2D gameTex = softFilter && softTarget != null ? (Texture2D)softTarget : gameTarget;
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, gameSampler, null, null);
             if (AppMain.IsStageTouchActive() && STAGE_ZOOM != 1f)
             {
-                Rectangle hudBase = GetBaseRect();
-                float hudK = hudBase.Height / (float)GAME_H;
-                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, null, null);
-                spriteBatch.Draw(gameTarget,
-                    new Rectangle(hudBase.X, hudBase.Y, hudBase.Width, (int)Math.Round(HUD_BAND_UNITS * hudK)),
-                    new Rectangle(0, 0, gameTarget.Width, (int)Math.Round(HUD_BAND_UNITS * RENDER_SCALE)),
-                    Color.White);
-                spriteBatch.End();
+                // Zoom del escenario anclado debajo de la franja del HUD: la franja se dibuja sin zoom (su posición no cambia)
+                // y el escenario de abajo se amplía desde su borde superior, así no queda una línea en el corte.
+                Rectangle b = GetBaseRect();
+                int bandSrc = (int)Math.Round(HUD_BAND_UNITS * RENDER_SCALE);
+                int bandDst = (int)Math.Round(HUD_BAND_UNITS * b.Height / (float)GAME_H);
+                int zw = (int)Math.Round(b.Width * STAGE_ZOOM);
+                int zx = b.X + (b.Width - zw) / 2;
+                int bodyH = (int)Math.Round((b.Height - bandDst) * STAGE_ZOOM);
+                spriteBatch.Draw(gameTex, new Rectangle(b.X, b.Y, b.Width, bandDst), new Rectangle(0, 0, gameTex.Width, bandSrc), Color.White);
+                spriteBatch.Draw(gameTex, new Rectangle(zx, b.Y + bandDst, zw, bodyH), new Rectangle(0, bandSrc, gameTex.Width, gameTex.Height - bandSrc), Color.White);
             }
+            else
+            {
+                spriteBatch.Draw(gameTex, GetGameRect(), Color.White);
+            }
+            spriteBatch.End();
             // En fases especiales no hay controles en pantalla: se juega moviendo el celular.
             if (!boot && !AppMain.IsSpecialStageNow())
             {
