@@ -55,3 +55,12 @@
 - `Sonic4Ep1` (constructor): el backbuffer usa `Display.GetRealMetrics` (tamaño real incluyendo barra de
   navegación/recorte) en lugar de `Resources.DisplayMetrics`. Si la proporción del backbuffer no coincide con la
   superficie, Android estira la imagen al presentar: se ve aplastada y con texturas borrosas.
+
+## Touch: posición del salto independiente del ancho
+- `pad_layout.txt` pasa a `ver 4`: el salto se guarda como distancia desde el borde derecho (antes era X absoluto y
+  se corría al cambiar el ancho de pantalla). Los archivos `ver 3` se leen y se ajustan a la pantalla actual.
+- Al cargar, el d-pad y el salto se limitan a la pantalla para no quedar fuera.
+
+## Diagnóstico de proporciones (DEBUG_LAYOUT)
+- `Sonic4Ep1.DrawLayoutDebug`: muestra backbuffer, viewport, RENDER_W x GAME_H, escala y aspecto de la cámara.
+  Está activo (`DEBUG_LAYOUT = true`). Poner en false para ocultarlo.

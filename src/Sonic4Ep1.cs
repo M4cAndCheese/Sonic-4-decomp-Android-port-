@@ -445,8 +445,8 @@ public class Sonic4Ep1 : Game
         {
             File.WriteAllLines(LayoutPath, new string[]
             {
-                "ver 3",
-                "jump " + F(jumpCenter.X) + "," + F(jumpCenter.Y) + "," + F(jumpSize),
+                "ver 4",
+                "jump " + F(RENDER_W - jumpCenter.X) + "," + F(jumpCenter.Y) + "," + F(jumpSize),
                 "stick " + F(stickCenter.X) + "," + F(stickCenter.Y) + "," + F(stickSize),
                 "wide " + (wideView ? "1" : "0"),
                 "soft " + (softFilter ? "1" : "0")
@@ -468,7 +468,8 @@ public class Sonic4Ep1 : Game
             }
             string[] lines = File.ReadAllLines(LayoutPath);
             // Disposiciones de versiones anteriores (sin la línea ver 3) se ignoran y se usa el diseño nuevo.
-            bool current = lines.Length > 0 && lines[0] == "ver 3";
+            int ver = lines.Length > 0 && lines[0] == "ver 4" ? 4 : (lines.Length > 0 && lines[0] == "ver 3" ? 3 : 0);
+            bool current = ver != 0;
             foreach (string line in lines)
             {
                 string[] p = line.Split(' ');
@@ -500,7 +501,9 @@ public class Sonic4Ep1 : Game
                 float sz = float.Parse(v[2], CultureInfo.InvariantCulture);
                 if (p[0] == "jump")
                 {
-                    jumpCenter = new Vector2(x, y);
+                    // ver 4: x es la distancia desde el borde derecho. ver 3: x era absoluto en el ancho de ese momento.
+                    float jx = ver == 4 ? RENDER_W - x : x;
+                    jumpCenter = new Vector2(jx, y);
                     jumpSize = sz;
                 }
                 else if (p[0] == "stick")
@@ -509,6 +512,11 @@ public class Sonic4Ep1 : Game
                     stickSize = sz;
                 }
             }
+            // Que el botón nunca quede fuera de la pantalla actual (layouts guardados con otro ancho).
+            jumpCenter = new Vector2(Clamp(jumpCenter.X, jumpSize / 2f, RENDER_W - jumpSize / 2f),
+                                     Clamp(jumpCenter.Y, jumpSize / 2f, GAME_H - jumpSize / 2f));
+            stickCenter = new Vector2(Clamp(stickCenter.X, stickSize / 2f, RENDER_W * 0.5f),
+                                      Clamp(stickCenter.Y, stickSize / 2f, GAME_H - stickSize / 2f));
             stickPos = stickCenter;
         }
         catch (Exception)
@@ -552,8 +560,30 @@ public class Sonic4Ep1 : Game
         prevTouchIds = cur;
     }
 
+    // Diagnóstico de proporciones: se activa con DEBUG_LAYOUT. Muestra tamaños reales de backbuffer, viewport y escala.
+    private const bool DEBUG_LAYOUT = true;
+
+    private void DrawLayoutDebug(Rectangle r)
+    {
+        if (!DEBUG_LAYOUT || fntKootenay == null)
+        {
+            return;
+        }
+        Viewport vp = GraphicsDevice.Viewport;
+        string info =
+            "backbuffer " + graphics.PreferredBackBufferWidth + "x" + graphics.PreferredBackBufferHeight + "\n" +
+            "viewport " + vp.Width + "x" + vp.Height + "\n" +
+            "RENDER " + RENDER_W + "x" + GAME_H + "  scale " + F(r.Width / (float)RENDER_W) + "," + F(r.Height / (float)GAME_H) + "\n" +
+            "gameRect " + r.Width + "x" + r.Height + " @" + r.X + "," + r.Y + "\n" +
+            "aspect proy " + F(AppMain.AMD_SCREEN_ASPECT) + "  2D " + AppMain.AMD_SCREEN_2D_WIDTH + "x" + AppMain.AMD_SCREEN_2D_HEIGHT;
+        spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null);
+        spriteBatch.DrawString(fntKootenay, info, new Vector2(8, vp.Height * 0.55f), Color.Yellow, 0f, Vector2.Zero, 0.6f, SpriteEffects.None, 0f);
+        spriteBatch.End();
+    }
+
     private void DrawDebug(Rectangle r)
     {
+        DrawLayoutDebug(r);
         if (!DEBUG_TOUCH || fntKootenay == null || pixelTex == null)
         {
             return;
