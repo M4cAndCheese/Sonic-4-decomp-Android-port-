@@ -67,6 +67,7 @@ public class Sonic4Ep1 : Game
 
     // Controles grises del port de Sonic 1 2013 (dibujados encima del pad del motor, que queda oculto).
     private Texture2D padSheet;
+    private string padError;
     private Texture2D pixelTex;
     private Texture2D gearTex;
     // Diseño por defecto, medido de la captura del dispositivo (coordenadas del motor, alto GAME_H = 320).
@@ -211,14 +212,16 @@ public class Sonic4Ep1 : Game
         SetDefaultLayout();
         try
         {
-            using (var st = TitleContainer.OpenStream("Content/ui/pad_hq.png"))
+            using (var st = GameData.OpenStream("ui/pad_hq.png"))
             {
                 padSheet = Texture2D.FromStream(base.GraphicsDevice, st);
             }
+            padError = null;
         }
-        catch (Exception)
+        catch (Exception e)
         {
             padSheet = null; // Sin la hoja de sprites, el juego usa el pad del motor.
+            padError = e.GetType().Name + ": " + e.Message;
         }
         pixelTex = new Texture2D(base.GraphicsDevice, 1, 1);
         pixelTex.SetData(new Color[] { Color.White });
@@ -575,7 +578,8 @@ public class Sonic4Ep1 : Game
             "viewport " + vp.Width + "x" + vp.Height + "\n" +
             "RENDER " + RENDER_W + "x" + GAME_H + "  scale " + F(r.Width / (float)RENDER_W) + "," + F(r.Height / (float)GAME_H) + "\n" +
             "gameRect " + r.Width + "x" + r.Height + " @" + r.X + "," + r.Y + "\n" +
-            "aspect proy " + F(AppMain.AMD_SCREEN_ASPECT) + "  2D " + AppMain.AMD_SCREEN_2D_WIDTH + "x" + AppMain.AMD_SCREEN_2D_HEIGHT;
+            "aspect proy " + F(AppMain.AMD_SCREEN_ASPECT) + "  2D " + AppMain.AMD_SCREEN_2D_WIDTH + "x" + AppMain.AMD_SCREEN_2D_HEIGHT + "\n" +
+            "pad " + (padSheet != null ? "ok" : "ERROR " + padError) + "  partida " + AppMain.IsStageTouchActive();
         spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null);
         spriteBatch.DrawString(fntKootenay, info, new Vector2(8, vp.Height * 0.55f), Color.Yellow, 0f, Vector2.Zero, 0.6f, SpriteEffects.None, 0f);
         spriteBatch.End();

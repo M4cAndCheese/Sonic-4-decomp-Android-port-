@@ -164010,9 +164010,9 @@ public class AppMain
 		OpenGL.glViewport(0, 0, Sonic4Ep1.RENDER_W * Sonic4Ep1.RENDER_SCALE, Sonic4Ep1.GAME_H * Sonic4Ep1.RENDER_SCALE);
 		int num = 480;
 		int num2 = Sonic4Ep1.GAME_H;
-		// nnMakePerspectiveMatrix usa M00 = cot / aspect, así que aspect debe ser ancho/alto del viewport.
-		// Con RENDER_W x GAME_H (480x288 en la configuración original) los píxeles son cuadrados.
-		float projAspect = (float)Sonic4Ep1.RENDER_W / (float)Sonic4Ep1.GAME_H;
+		// PROJECTION_CORRECTION gira la imagen 90° (rotación Z). Con esa rotación el aspecto de la
+		// perspectiva tiene que ser alto/ancho; con ancho/alto el 3D sale estirado horizontalmente.
+		float projAspect = (float)Sonic4Ep1.GAME_H / (float)Sonic4Ep1.RENDER_W;
 		amRenderInit();
 		NNS_MATRIX nNS_MATRIX = GlobalPool<NNS_MATRIX>.Alloc();
 		new NNS_VECTOR(0f, 0f, -1f);
