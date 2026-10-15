@@ -2326,6 +2326,9 @@ public sealed class OpenGL
 
     private static bool m_secondaryColorArrayEnabled;
 
+    // Escala vertical de la proyección 3D. Antes era 1.12 fijo, que deformaba todo el 3D (logo SEGA, personajes).
+    // Ahora es 1.0: píxeles cuadrados. Si algo sigue viéndose mal, prueba aquí otro valor.
+    private const float PROJ_Y_SCALE = 1.0f;
     private static readonly Matrix PROJECTION_CORRECTION;
 
     private static VertexPosTexColNorm[][] m_vertices;
@@ -4506,7 +4509,7 @@ public sealed class OpenGL
         m_matrixIndexArrayStride = 0;
         m_matrixIndexArray = null;
         m_secondaryColorArrayEnabled = false;
-        PROJECTION_CORRECTION = Matrix.CreateRotationZ((float)Math.PI / 2f) * Matrix.CreateScale(1f, 1.12f, 0.5f) * Matrix.CreateTranslation(0f, 0f, 0.5f);
+        PROJECTION_CORRECTION = Matrix.CreateRotationZ((float)Math.PI / 2f) * Matrix.CreateScale(1f, PROJ_Y_SCALE, 0.5f) * Matrix.CreateTranslation(0f, 0f, 0.5f);
         m_vertices = new VertexPosTexColNorm[2][]
         {
             new VertexPosTexColNorm[32768],
