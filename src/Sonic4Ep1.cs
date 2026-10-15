@@ -412,19 +412,30 @@ public class Sonic4Ep1 : Game
             GraphicsDevice.SetRenderTarget(null);
             // El fondo difuminado usa muestreo lineal (es borroso a propósito); la capa del juego usa el modo elegido.
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.LinearClamp, null, null);
-            if (wideView)
-            {
-                spriteBatch.Draw(blurTarget, GraphicsDevice.Viewport.Bounds, new Color(110, 110, 110));
-            }
+            spriteBatch.Draw(blurTarget, GraphicsDevice.Viewport.Bounds, wideView ? new Color(110, 110, 110) : Color.White);
             spriteBatch.End();
             // Escala entera: píxeles nítidos. Escala fraccionaria: muestreo lineal para no dejar bordes en diente de sierra.
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, (softFilter || !IsIntegerScale()) ? SamplerState.LinearClamp : SamplerState.PointClamp, null, null);
+            // AlphaBlend: las zonas sin nivel son transparentes y dejan ver el fondo difuminado de los laterales.
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, (softFilter || !IsIntegerScale()) ? SamplerState.LinearClamp : SamplerState.PointClamp, null, null);
             spriteBatch.Draw(softFilter && softTarget != null ? (Texture2D)softTarget : gameTarget, GetGameRect(), Color.White);
             spriteBatch.End();
+            // HUD sin zoom: la franja superior del nivel (anillos, puntaje, tiempo, vidas, pausa) se vuelve a dibujar
+            // desde el render sin ampliar, así que no cambia de tamaño ni de posición.
+            if (AppMain.IsStageTouchActive() && STAGE_ZOOM != 1f)
+            {
+                Rectangle hudBase = GetBaseRect();
+                float hudK = hudBase.Height / (float)GAME_H;
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, null, null);
+                spriteBatch.Draw(gameTarget,
+                    new Rectangle(hudBase.X, hudBase.Y, hudBase.Width, (int)Math.Round(HUD_BAND_UNITS * hudK)),
+                    new Rectangle(0, 0, gameTarget.Width, (int)Math.Round(HUD_BAND_UNITS * RENDER_SCALE)),
+                    Color.White);
+                spriteBatch.End();
+            }
             // En fases especiales no hay controles en pantalla: se juega moviendo el celular.
             if (!AppMain.IsSpecialStageNow())
             {
-                DrawControls(GetGameRect());
+                DrawControls(GetBaseRect());
             }
             DrawDebug(GetGameRect());
         }
@@ -939,10 +950,15 @@ public class Sonic4Ep1 : Game
     // aquí se amplía el área lógica (culling/scroll) para que el nivel y el fondo llenen los laterales.
     public static float WideExtra2D { get { return (RENDER_W - GAME_W) / 2f; } }
 
-    // Área donde se dibuja el juego: escala uniforme que llena el alto de la pantalla y ancho RENDER_W
-    // con la misma escala. RENDER_W sigue la proporción de la pantalla, así que no hay estiramiento.
-    // Si la proporción no coincide del todo, las bandas quedan simétricas a izquierda y derecha.
-    public Rectangle GetGameRect()
+    // Zoom del escenario en niveles: oculta los bordes que el nivel no cubre en ultrawide.
+    // Solo afecta a lo que se dibuja del juego; los controles y el toque siguen en el rectángulo base.
+    // Zoom solo en niveles: tapa el borde del mapa en ultrawide. El HUD se redibuja sin zoom y los controles no cambian.
+    private const float STAGE_ZOOM = 1.4f;
+    // Alto de la franja de HUD superior (unidades de juego) que se muestra sin zoom.
+    private const float HUD_BAND_UNITS = 88f;
+
+    // Área base donde se dibuja el juego: escala uniforme que llena el alto y ancho RENDER_W.
+    private Rectangle GetBaseRect()
     {
         Viewport vp = GraphicsDevice.Viewport;
         float scale = vp.Height / (float)GAME_H;
@@ -950,6 +966,18 @@ public class Sonic4Ep1 : Game
         int h = (int)Math.Round(GAME_H * scale);
         int x = (vp.Width - w) / 2;
         int y = (vp.Height - h) / 2;
+        return new Rectangle(x, y, w, h);
+    }
+
+    // Área donde se dibuja el escenario: el base, con zoom centrado en niveles.
+    public Rectangle GetGameRect()
+    {
+        Rectangle b = GetBaseRect();
+        float z = AppMain.IsStageTouchActive() ? STAGE_ZOOM : 1f;
+        int w = (int)Math.Round(b.Width * z);
+        int h = (int)Math.Round(b.Height * z);
+        int x = b.X + (b.Width - w) / 2;
+        int y = b.Y + (b.Height - h) / 2;
         gameRect = new Rectangle(x, y, w, h);
         return gameRect;
     }
@@ -957,7 +985,7 @@ public class Sonic4Ep1 : Game
     // Toques para menús: el contenido de 480 px está centrado en el ancho real, así que se resta el margen.
     public TouchCollection GetMenuTouches()
     {
-        Rectangle r = GetGameRect();
+        Rectangle r = GetBaseRect();
         float sx = RENDER_W / (float)r.Width;
         float sy = GAME_H / (float)r.Height;
         float off = CenterDX;
@@ -981,7 +1009,7 @@ public class Sonic4Ep1 : Game
             }
             return new TouchCollection(new TouchLocation[0]);
         }
-        Rectangle r = GetGameRect();
+        Rectangle r = GetBaseRect();
         float sx = RENDER_W / (float)r.Width;
         float sy = GAME_H / (float)r.Height;
         List<TouchLocation> list = new List<TouchLocation>();
