@@ -931,13 +931,21 @@ public class Sonic4Ep1 : Game
     // como RENDER_W sigue la proporción de la pantalla, no quedan bandas negras.
     // El alto del juego ocupa toda la pantalla (tope a tope, arriba y abajo) y el ancho sale de RENDER_W
     // con la misma escala, así que no hay estiramiento ni franjas arriba o abajo.
+    // Zoom sin estirar: se recortan las franjas vacías de los laterales (en unidades de juego) y la
+    // escala es uniforme, así que nada se aplasta. Si el alto no alcanza, también se recorta arriba y abajo.
+    public const int CROP_LEFT = 45;
+    public const int CROP_RIGHT = 2;
+
     public Rectangle GetGameRect()
     {
         Viewport vp = GraphicsDevice.Viewport;
-        float scale = vp.Height / (float)GAME_H;
+        float visibleW = RENDER_W - CROP_LEFT - CROP_RIGHT;
+        float scale = Math.Max(vp.Width / visibleW, vp.Height / (float)GAME_H);
         int w = (int)Math.Round(RENDER_W * scale);
-        int h = vp.Height;
-        gameRect = new Rectangle((vp.Width - w) / 2, 0, w, h);
+        int h = (int)Math.Round(GAME_H * scale);
+        int x = (int)Math.Round(-CROP_LEFT * scale);
+        int y = (vp.Height - h) / 2;
+        gameRect = new Rectangle(x, y, w, h);
         return gameRect;
     }
 
