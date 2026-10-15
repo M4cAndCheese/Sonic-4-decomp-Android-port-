@@ -15082,9 +15082,9 @@ public class AppMain
 
 		public bool Create()
 		{
-			m_area.left = 0f;
+			m_area.left = -Sonic4Ep1.WideExtra2D;
 			m_area.top = 0f;
-			m_area.right = AMD_SCREEN_2D_WIDTH;
+			m_area.right = AMD_SCREEN_2D_WIDTH + Sonic4Ep1.WideExtra2D;
 			m_area.bottom = 320f;
 			m_center.x = AMD_SCREEN_2D_WIDTH * 0.5f;
 			m_center.y = 144f;
@@ -15123,9 +15123,9 @@ public class AppMain
 
 		public bool Create(CArray2<float> center)
 		{
-			m_area.left = 0f;
+			m_area.left = -Sonic4Ep1.WideExtra2D;
 			m_area.top = 0f;
-			m_area.right = AMD_SCREEN_2D_WIDTH;
+			m_area.right = AMD_SCREEN_2D_WIDTH + Sonic4Ep1.WideExtra2D;
 			m_area.bottom = 320f;
 			m_center = center;
 			return create();
@@ -15133,9 +15133,9 @@ public class AppMain
 
 		public bool Create(float center_x, float center_y)
 		{
-			m_area.left = 0f;
+			m_area.left = -Sonic4Ep1.WideExtra2D;
 			m_area.top = 0f;
-			m_area.right = AMD_SCREEN_2D_WIDTH;
+			m_area.right = AMD_SCREEN_2D_WIDTH + Sonic4Ep1.WideExtra2D;
 			m_area.bottom = 320f;
 			m_center.x = center_x;
 			m_center.y = center_y;
@@ -19327,9 +19327,9 @@ public class AppMain
 
 		public bool Create()
 		{
-			m_area.left = 0f;
+			m_area.left = -Sonic4Ep1.WideExtra2D;
 			m_area.top = 0f;
-			m_area.right = AMD_SCREEN_2D_WIDTH;
+			m_area.right = AMD_SCREEN_2D_WIDTH + Sonic4Ep1.WideExtra2D;
 			m_area.bottom = 320f;
 			return create();
 		}
@@ -180661,6 +180661,20 @@ public class AppMain
 		try
 		{
 			return GSM_MAIN_STAGE_IS_SPSTAGE();
+		}
+		catch (Exception)
+		{
+			return false;
+		}
+	}
+
+	// Pantallas de arranque (SEGA, Sonic Team, carga inicial): sin controles y con el fondo a brillo completo.
+	public static bool IsBootScreenNow()
+	{
+		try
+		{
+			short evt = SyGetEvtInfo().cur_evt_id;
+			return evt == (short)GSE_EVT_ID.GSD_EVT_ID_SYS_INIT || evt == (short)GSE_EVT_ID.GSD_EVT_ID_LOGO_SEGA || evt == (short)GSE_EVT_ID.GSD_EVT_ID_LOGO_SONIC;
 		}
 		catch (Exception)
 		{

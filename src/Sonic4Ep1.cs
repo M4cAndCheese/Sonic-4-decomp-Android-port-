@@ -81,17 +81,18 @@ public class Sonic4Ep1 : Game
     private DateTime deactivatedAt = DateTime.MinValue;
     private Texture2D pixelTex;
     private Texture2D gearTex;
-    // Diseño por defecto, medido de la captura del dispositivo (coordenadas del motor, alto GAME_H = 320).
-    // d-pad abajo a la izquierda y salto abajo a la derecha. Lo usan los builds que no tengan pad_layout.txt.
-    private const float DefEdge = 68f;        // centro X del d-pad desde el borde izquierdo
-    private const float DefJumpEdge = 58f;    // centro X del salto desde el borde derecho (ancla a RENDER_W)
-    private const float DefY = 244f;          // centro Y de ambos botones
-    private const float DefStickSize = 74f;   // diámetro del d-pad
-    private const float DefJumpSize = 74f;    // diámetro del salto
-    private Vector2 stickCenter = new Vector2(68f, 244f);
-    private Vector2 jumpCenter = new Vector2(625f, 244f);
-    private float stickSize = 74f;
-    private float jumpSize = 74f;
+    // Diseño por defecto, medido de la captura de referencia (coordenadas del motor, alto GAME_H = 320).
+    // d-pad abajo a la izquierda y salto abajo a la derecha, mismo tamaño y posición que la captura.
+    private const float DefEdge = 74f;         // centro X del d-pad desde el borde izquierdo
+    private const float DefJumpEdge = 74.9f;   // centro X del salto desde el borde derecho (ancla a RENDER_W)
+    private const float DefStickY = 245f;      // centro Y del d-pad
+    private const float DefJumpY = 250.5f;     // centro Y del salto
+    private const float DefStickSize = 83.4f;  // diámetro del d-pad
+    private const float DefJumpSize = 71.3f;   // diámetro del salto
+    private Vector2 stickCenter = new Vector2(DefEdge, DefStickY);
+    private Vector2 jumpCenter = new Vector2(DefJumpEdge, DefJumpY);
+    private float stickSize = DefStickSize;
+    private float jumpSize = DefJumpSize;
     private Vector2 stickPos;
     private float jumpScale = 1f;
     private bool jumpHeld;
@@ -132,7 +133,7 @@ public class Sonic4Ep1 : Game
     }
 
     private int CenterDX { get { return (RENDER_W - GAME_W) / 2; } }
-    private Rectangle GearRect { get { return ShiftX(GearBase, RENDER_W - GAME_W); } }
+    private Rectangle GearRect { get { return ShiftX(GearBase, (int)Math.Round(RENDER_W - GAME_W - CROP_RIGHT)); } }
     private Rectangle ListoRect { get { return ShiftX(ListoBase, CenterDX); } }
     private Rectangle MenuPanel { get { return ShiftX(MenuPanelBase, CenterDX); } }
     private Rectangle MenuVistaRect { get { return ShiftX(MenuVistaBase, CenterDX); } }
@@ -221,12 +222,12 @@ public class Sonic4Ep1 : Game
         // Render a resolución nativa (480x320): los assets del motor son de esa resolución. Con muestreo de píxel
         // cercano (modo nítido) el escalado a la pantalla se ve como pixel art; con filtro suave se mezcla.
         // Render al doble de resolución interna: se reduce a la pantalla con menos pixelado.
-        RENDER_SCALE = 2;
+        RENDER_SCALE = 3;
         gameTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W * RENDER_SCALE, GAME_H * RENDER_SCALE, false, SurfaceFormat.Color, DepthFormat.Depth24);
         AppMain.pauseKeyX = (uint)PauseRect.X;
         // Versión mínima del frame para hacer el fondo difuminado de los laterales.
         blurTarget = new RenderTarget2D(base.GraphicsDevice, 32, 18, false, SurfaceFormat.Color, DepthFormat.None);
-        softTarget = new RenderTarget2D(base.GraphicsDevice, Math.Max(1, RENDER_W * 3 / 4), GAME_H * 3 / 4, false, SurfaceFormat.Color, DepthFormat.None);
+        softTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W * RENDER_SCALE, GAME_H * RENDER_SCALE, false, SurfaceFormat.Color, DepthFormat.None);
         SetDefaultLayout();
         try
         {
@@ -411,19 +412,32 @@ public class Sonic4Ep1 : Game
             GraphicsDevice.SetRenderTarget(null);
             // El fondo difuminado usa muestreo lineal (es borroso a propósito); la capa del juego usa el modo elegido.
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.LinearClamp, null, null);
-            if (wideView)
-            {
-                spriteBatch.Draw(blurTarget, GraphicsDevice.Viewport.Bounds, new Color(110, 110, 110));
-            }
+            // En pantallas de arranque el fondo se ve a brillo completo: los laterales toman el color real del logo o de la carga.
+            bool boot = AppMain.IsBootScreenNow();
+            spriteBatch.Draw(blurTarget, GraphicsDevice.Viewport.Bounds, (wideView && !boot) ? new Color(110, 110, 110) : Color.White);
             spriteBatch.End();
             // Escala entera: píxeles nítidos. Escala fraccionaria: muestreo lineal para no dejar bordes en diente de sierra.
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, (softFilter || !IsIntegerScale()) ? SamplerState.LinearClamp : SamplerState.PointClamp, null, null);
+            // AlphaBlend: las zonas sin nivel son transparentes y dejan ver el fondo difuminado de los laterales.
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, (softFilter || !IsIntegerScale()) ? SamplerState.LinearClamp : SamplerState.PointClamp, null, null);
             spriteBatch.Draw(softFilter && softTarget != null ? (Texture2D)softTarget : gameTarget, GetGameRect(), Color.White);
             spriteBatch.End();
-            // En fases especiales no hay controles en pantalla: se juega moviendo el celular.
-            if (!AppMain.IsSpecialStageNow())
+            // HUD sin zoom: la franja superior del nivel (anillos, puntaje, tiempo, vidas, pausa) se vuelve a dibujar
+            // desde el render sin ampliar, así que no cambia de tamaño ni de posición.
+            if (AppMain.IsStageTouchActive() && STAGE_ZOOM != 1f)
             {
-                DrawControls(GetGameRect());
+                Rectangle hudBase = GetBaseRect();
+                float hudK = hudBase.Height / (float)GAME_H;
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, null, null);
+                spriteBatch.Draw(gameTarget,
+                    new Rectangle(hudBase.X, hudBase.Y, hudBase.Width, (int)Math.Round(HUD_BAND_UNITS * hudK)),
+                    new Rectangle(0, 0, gameTarget.Width, (int)Math.Round(HUD_BAND_UNITS * RENDER_SCALE)),
+                    Color.White);
+                spriteBatch.End();
+            }
+            // En fases especiales no hay controles en pantalla: se juega moviendo el celular.
+            if (!boot && !AppMain.IsSpecialStageNow())
+            {
+                DrawControls(GetBaseRect());
             }
             DrawDebug(GetGameRect());
         }
@@ -482,7 +496,7 @@ public class Sonic4Ep1 : Game
         {
             File.WriteAllLines(LayoutPath, new string[]
             {
-                "ver 4",
+                "ver 5",
                 "jump " + F(RENDER_W - jumpCenter.X) + "," + F(jumpCenter.Y) + "," + F(jumpSize),
                 "stick " + F(stickCenter.X) + "," + F(stickCenter.Y) + "," + F(stickSize),
                 "wide " + (wideView ? "1" : "0"),
@@ -505,9 +519,10 @@ public class Sonic4Ep1 : Game
                 return;
             }
             string[] lines = File.ReadAllLines(LayoutPath);
-            // Disposiciones de versiones anteriores (sin la línea ver 3) se ignoran y se usa el diseño nuevo.
-            int ver = lines.Length > 0 && lines[0] == "ver 4" ? 4 : (lines.Length > 0 && lines[0] == "ver 3" ? 3 : 0);
-            bool current = ver != 0;
+            // Posiciones de botones guardadas en versiones anteriores se ignoran: se usa el diseño nuevo.
+            // Vista, filtro y escala 3D de esas versiones sí se siguen leyendo.
+            int ver = lines.Length > 0 && lines[0] == "ver 5" ? 5 : 0;
+            bool current = ver == 5;
             foreach (string line in lines)
             {
                 string[] p = line.Split(' ');
@@ -552,8 +567,8 @@ public class Sonic4Ep1 : Game
                 float sz = float.Parse(v[2], CultureInfo.InvariantCulture);
                 if (p[0] == "jump")
                 {
-                    // ver 4: x es la distancia desde el borde derecho. ver 3: x era absoluto en el ancho de ese momento.
-                    float jx = ver == 4 ? RENDER_W - x : x;
+                    // x es la distancia desde el borde derecho.
+                    float jx = RENDER_W - x;
                     jumpCenter = new Vector2(jx, y);
                     jumpSize = sz;
                 }
@@ -578,9 +593,9 @@ public class Sonic4Ep1 : Game
 
     private void SetDefaultLayout()
     {
-        jumpCenter = new Vector2(RENDER_W - DefJumpEdge, DefY);
+        jumpCenter = new Vector2(RENDER_W - DefJumpEdge, DefJumpY);
         jumpSize = DefJumpSize;
-        stickCenter = new Vector2(DefEdge, DefY);
+        stickCenter = new Vector2(DefEdge, DefStickY);
         stickSize = DefStickSize;
         stickPos = stickCenter;
     }
@@ -612,7 +627,7 @@ public class Sonic4Ep1 : Game
     }
 
     // Diagnóstico de proporciones: se activa con DEBUG_LAYOUT. Muestra tamaños reales de backbuffer, viewport y escala.
-    private const bool DEBUG_LAYOUT = true;
+    private const bool DEBUG_LAYOUT = false;
 
     private void DrawLayoutDebug(Rectangle r)
     {
@@ -927,24 +942,52 @@ public class Sonic4Ep1 : Game
         return Math.Abs(s - Math.Round(s)) < 0.001f;
     }
 
-    // Área donde se dibuja el juego. Escala uniforme (sin estirar) y sin recortar:
-    // como RENDER_W sigue la proporción de la pantalla, no quedan bandas negras.
-    // El alto del juego ocupa toda la pantalla (tope a tope, arriba y abajo) y el ancho sale de RENDER_W
-    // con la misma escala, así que no hay estiramiento ni franjas arriba o abajo.
-    public Rectangle GetGameRect()
+    // Sin recorte: el escenario de los laterales (franja extra del ultrawide) se ve completo.
+    public const float CROP_LEFT = 0f;
+    public const float CROP_RIGHT = 0f;
+    // Desplazamiento vertical del área de juego (en unidades). Con 0 se ve el alto completo, 0 a 320.
+    public const float CAM_TOP_UNITS = 0f;
+
+    // Franja extra a cada lado del área 2D (en unidades de juego). La ortográfica 2D ya la dibuja;
+    // aquí se amplía el área lógica (culling/scroll) para que el nivel y el fondo llenen los laterales.
+    public static float WideExtra2D { get { return (RENDER_W - GAME_W) / 2f; } }
+
+    // Zoom del escenario en niveles: oculta los bordes que el nivel no cubre en ultrawide.
+    // Solo afecta a lo que se dibuja del juego; los controles y el toque siguen en el rectángulo base.
+    // Zoom solo en niveles: tapa el borde del mapa en ultrawide. El HUD se redibuja sin zoom y los controles no cambian.
+    private const float STAGE_ZOOM = 1.4f;
+    // Alto de la franja de HUD superior (unidades de juego) que se muestra sin zoom.
+    private const float HUD_BAND_UNITS = 88f;
+
+    // Área base donde se dibuja el juego: escala uniforme que llena el alto y ancho RENDER_W.
+    private Rectangle GetBaseRect()
     {
         Viewport vp = GraphicsDevice.Viewport;
         float scale = vp.Height / (float)GAME_H;
         int w = (int)Math.Round(RENDER_W * scale);
-        int h = vp.Height;
-        gameRect = new Rectangle((vp.Width - w) / 2, 0, w, h);
+        int h = (int)Math.Round(GAME_H * scale);
+        int x = (vp.Width - w) / 2;
+        int y = (vp.Height - h) / 2;
+        return new Rectangle(x, y, w, h);
+    }
+
+    // Área donde se dibuja el escenario: el base, con zoom centrado en niveles.
+    public Rectangle GetGameRect()
+    {
+        Rectangle b = GetBaseRect();
+        float z = AppMain.IsStageTouchActive() ? STAGE_ZOOM : 1f;
+        int w = (int)Math.Round(b.Width * z);
+        int h = (int)Math.Round(b.Height * z);
+        int x = b.X + (b.Width - w) / 2;
+        int y = b.Y + (b.Height - h) / 2;
+        gameRect = new Rectangle(x, y, w, h);
         return gameRect;
     }
 
     // Toques para menús: el contenido de 480 px está centrado en el ancho real, así que se resta el margen.
     public TouchCollection GetMenuTouches()
     {
-        Rectangle r = GetGameRect();
+        Rectangle r = GetBaseRect();
         float sx = RENDER_W / (float)r.Width;
         float sy = GAME_H / (float)r.Height;
         float off = CenterDX;
@@ -968,7 +1011,7 @@ public class Sonic4Ep1 : Game
             }
             return new TouchCollection(new TouchLocation[0]);
         }
-        Rectangle r = GetGameRect();
+        Rectangle r = GetBaseRect();
         float sx = RENDER_W / (float)r.Width;
         float sy = GAME_H / (float)r.Height;
         List<TouchLocation> list = new List<TouchLocation>();
