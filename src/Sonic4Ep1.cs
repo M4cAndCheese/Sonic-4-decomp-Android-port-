@@ -74,6 +74,8 @@ public class Sonic4Ep1 : Game
     // Pausa por toque: se ignora un rato después de volver de la pausa o al empezar la partida.
     private int pauseCooldown;
     private bool wasStageActive;
+    // Tras volver de la pausa, los dedos que ya estaban apoyados no cuentan hasta soltarlos.
+    private bool touchLockedUntilRelease;
     // Cuándo se desactivó la app: paneles del sistema (volumen, no molestar) no deben pausar el juego.
     private DateTime deactivatedAt = DateTime.MinValue;
     private Texture2D pixelTex;
@@ -120,7 +122,8 @@ public class Sonic4Ep1 : Game
     private static readonly Rectangle MenuCloseBase = new Rectangle(160, 236, 160, 26);
     private static readonly Rectangle MenuScaleBase = new Rectangle(160, 270, 160, 26);
 
-    private Rectangle PauseRect { get { return new Rectangle(RENDER_W / 2 - 58, 0, 116, 60); } }
+    // Botón de pausa dibujado por el motor: en 480 px va en x=215..331; con ultrawide se desplaza CenterDX.
+    private Rectangle PauseRect { get { return new Rectangle(CenterDX + 215, 0, 116, 60); } }
 
     private static Rectangle ShiftX(Rectangle r, int dx)
     {
@@ -208,7 +211,9 @@ public class Sonic4Ep1 : Game
         // se toma de la proporción real del área de dibujo. Así no hay zoom ni estiramiento.
         // El juego se dibuja en su resolución original 15:9 (480x288): sin estirar y con la geometría del motor intacta.
         // Ultrawide sin estirar: el alto se queda en 288 y el ancho sigue la proporción real de la pantalla.
-        float screenAspect = graphics.PreferredBackBufferWidth / (float)graphics.PreferredBackBufferHeight;
+        // Proporción del área REAL de dibujo (no del backbuffer pedido), para que el alto ocupe toda la pantalla.
+        Viewport dev = base.GraphicsDevice.Viewport;
+        float screenAspect = dev.Width / (float)dev.Height;
         RENDER_W = ULTRAWIDE_ENABLED ? Math.Max(GAME_W, Math.Min(MAX_RENDER_W, (int)Math.Round(GAME_H * screenAspect))) : GAME_W;
         // Resolución interna: aprox. la altura real de la pantalla, limitada por el tamaño máximo de textura.
         // Ultra HD: 2x la altura de la pantalla, limitado por MAX_TARGET_DIM.
@@ -216,6 +221,7 @@ public class Sonic4Ep1 : Game
         // cercano (modo nítido) el escalado a la pantalla se ve como pixel art; con filtro suave se mezcla.
         RENDER_SCALE = 1;
         gameTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W * RENDER_SCALE, GAME_H * RENDER_SCALE, false, SurfaceFormat.Color, DepthFormat.Depth24);
+        AppMain.pauseKeyX = (uint)PauseRect.X;
         // Versión mínima del frame para hacer el fondo difuminado de los laterales.
         blurTarget = new RenderTarget2D(base.GraphicsDevice, 32, 18, false, SurfaceFormat.Color, DepthFormat.None);
         softTarget = new RenderTarget2D(base.GraphicsDevice, Math.Max(1, RENDER_W * 3 / 4), GAME_H * 3 / 4, false, SurfaceFormat.Color, DepthFormat.None);
@@ -322,6 +328,7 @@ public class Sonic4Ep1 : Game
         if (stageActive && !wasStageActive)
         {
             pauseCooldown = 45;
+            touchLockedUntilRelease = TouchPanel.GetState().Count > 0;
         }
         wasStageActive = stageActive;
         if (stageActive && pauseCooldown == 0)
@@ -920,13 +927,15 @@ public class Sonic4Ep1 : Game
 
     // Área donde se dibuja el juego. Escala uniforme (sin estirar) y sin recortar:
     // como RENDER_W sigue la proporción de la pantalla, no quedan bandas negras.
+    // El alto del juego ocupa toda la pantalla (tope a tope, arriba y abajo) y el ancho sale de RENDER_W
+    // con la misma escala, así que no hay estiramiento ni franjas arriba o abajo.
     public Rectangle GetGameRect()
     {
         Viewport vp = GraphicsDevice.Viewport;
-        float scale = Math.Min(vp.Width / (float)RENDER_W, vp.Height / (float)GAME_H);
+        float scale = vp.Height / (float)GAME_H;
         int w = (int)Math.Round(RENDER_W * scale);
-        int h = (int)Math.Round(GAME_H * scale);
-        gameRect = new Rectangle((vp.Width - w) / 2, (vp.Height - h) / 2, w, h);
+        int h = vp.Height;
+        gameRect = new Rectangle((vp.Width - w) / 2, 0, w, h);
         return gameRect;
     }
 
@@ -949,6 +958,14 @@ public class Sonic4Ep1 : Game
     // Toques en coordenadas de pantalla -> coordenadas del juego (RENDER_W x GAME_H).
     public TouchCollection GetGameTouches()
     {
+        if (touchLockedUntilRelease)
+        {
+            if (TouchPanel.GetState().Count == 0)
+            {
+                touchLockedUntilRelease = false;
+            }
+            return new TouchCollection(new TouchLocation[0]);
+        }
         Rectangle r = GetGameRect();
         float sx = RENDER_W / (float)r.Width;
         float sy = GAME_H / (float)r.Height;

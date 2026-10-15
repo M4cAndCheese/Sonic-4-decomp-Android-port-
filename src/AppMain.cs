@@ -82005,10 +82005,13 @@ public class AppMain
 		}
 	}
 
+	// Zona del botón de pausa (coordenadas del juego). La fija Sonic4Ep1 para que coincida con el botón dibujado.
+	public static uint pauseKeyX = 215u;
+
 	private static int GmMainKeyCheckPauseKeyOn()
 	{
 		int result = -1;
-		uint num = 215u;
+		uint num = pauseKeyX;
 		uint num2 = 0u;
 		if (GSM_MAIN_STAGE_IS_SPSTAGE())
 		{
@@ -82045,7 +82048,7 @@ public class AppMain
 	private static int GmMainKeyCheckPauseKeyPush()
 	{
 		int result = -1;
-		uint num = 215u;
+		uint num = pauseKeyX;
 		uint num2 = 0u;
 		if (GSM_MAIN_STAGE_IS_SPSTAGE())
 		{
