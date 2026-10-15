@@ -83,15 +83,15 @@ public class Sonic4Ep1 : Game
     private Texture2D gearTex;
     // Diseño por defecto, medido de la captura del dispositivo (coordenadas del motor, alto GAME_H = 320).
     // d-pad abajo a la izquierda y salto abajo a la derecha. Lo usan los builds que no tengan pad_layout.txt.
-    private const float DefEdge = 68f;        // centro X del d-pad desde el borde izquierdo
-    private const float DefJumpEdge = 58f;    // centro X del salto desde el borde derecho (ancla a RENDER_W)
-    private const float DefY = 244f;          // centro Y de ambos botones
+    private const float DefEdge = 67f;        // centro X del d-pad desde el borde izquierdo
+    private const float DefJumpEdge = 68f;    // centro X del salto desde el borde derecho (ancla a RENDER_W)
+    private const float DefY = 239f;          // centro Y de ambos botones
     private const float DefStickSize = 74f;   // diámetro del d-pad
-    private const float DefJumpSize = 74f;    // diámetro del salto
-    private Vector2 stickCenter = new Vector2(68f, 244f);
-    private Vector2 jumpCenter = new Vector2(625f, 244f);
+    private const float DefJumpSize = 64f;    // diámetro del salto
+    private Vector2 stickCenter = new Vector2(100f, 239f);
+    private Vector2 jumpCenter = new Vector2(592f, 239f);
     private float stickSize = 74f;
-    private float jumpSize = 74f;
+    private float jumpSize = 64f;
     private Vector2 stickPos;
     private float jumpScale = 1f;
     private bool jumpHeld;
@@ -933,8 +933,8 @@ public class Sonic4Ep1 : Game
     // con la misma escala, así que no hay estiramiento ni franjas arriba o abajo.
     // Zoom sin estirar: se recortan las franjas vacías de los laterales (en unidades de juego) y la
     // escala es uniforme, así que nada se aplasta. Si el alto no alcanza, también se recorta arriba y abajo.
-    public const int CROP_LEFT = 0;
-    public const int CROP_RIGHT = 0;
+    public const int CROP_LEFT = 33;
+    public const int CROP_RIGHT = 33;
 
     // Franja extra a cada lado del área 2D (en unidades de juego). La ortográfica 2D ya la dibuja;
     // aquí se amplía el área lógica (culling/scroll) para que el nivel y el fondo llenen los laterales.
