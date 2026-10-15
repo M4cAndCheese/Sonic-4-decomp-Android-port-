@@ -137834,14 +137834,12 @@ public class AppMain
 	{
 		int ang = fovy >> 1;
 		double num = 1.0 / (double)nnTan(ang);
-		// Con la rotación de PROJECTION_CORRECTION, 'aspect' llega como alto/ancho. Así la escala queda
-		// igual que el alto original (sin zoom) y los píxeles salen cuadrados.
-		mtx.M00 = (float)num;
+		mtx.M00 = (float)(num / (double)aspect);
 		mtx.M01 = 0f;
 		mtx.M02 = 0f;
 		mtx.M03 = 0f;
 		mtx.M10 = 0f;
-		mtx.M11 = (float)(num * (double)aspect);
+		mtx.M11 = (float)num;
 		mtx.M12 = 0f;
 		mtx.M13 = 0f;
 		mtx.M20 = 0f;
@@ -164012,9 +164010,9 @@ public class AppMain
 		OpenGL.glViewport(0, 0, Sonic4Ep1.RENDER_W * Sonic4Ep1.RENDER_SCALE, Sonic4Ep1.GAME_H * Sonic4Ep1.RENDER_SCALE);
 		int num = 480;
 		int num2 = Sonic4Ep1.GAME_H;
-		// PROJECTION_CORRECTION gira la imagen 90° (rotación Z). Con esa rotación el aspecto de la
-		// perspectiva tiene que ser alto/ancho; con ancho/alto el 3D sale estirado horizontalmente.
-		float projAspect = (float)Sonic4Ep1.GAME_H / (float)Sonic4Ep1.RENDER_W;
+		// Aspecto ancho/alto, como espera el motor. La corrección 3D está en OpenGL.SetProjectionAspect.
+		float projAspect = (float)Sonic4Ep1.RENDER_W / (float)Sonic4Ep1.GAME_H;
+		OpenGL.SetProjectionAspect(projAspect);
 		amRenderInit();
 		NNS_MATRIX nNS_MATRIX = GlobalPool<NNS_MATRIX>.Alloc();
 		new NNS_VECTOR(0f, 0f, -1f);
