@@ -81,17 +81,18 @@ public class Sonic4Ep1 : Game
     private DateTime deactivatedAt = DateTime.MinValue;
     private Texture2D pixelTex;
     private Texture2D gearTex;
-    // Diseño por defecto, medido de la captura del dispositivo (coordenadas del motor, alto GAME_H = 320).
-    // d-pad abajo a la izquierda y salto abajo a la derecha. Lo usan los builds que no tengan pad_layout.txt.
-    private const float DefEdge = 51.5f;        // centro X del d-pad desde el borde izquierdo
-    private const float DefJumpEdge = 52f;    // centro X del salto desde el borde derecho (ancla a RENDER_W)
-    private const float DefY = 184.5f;          // centro Y de ambos botones
-    private const float DefStickSize = 57f;   // diámetro del d-pad
-    private const float DefJumpSize = 49f;    // diámetro del salto
-    private Vector2 stickCenter = new Vector2(158f, 184.5f);
-    private Vector2 jumpCenter = new Vector2(534.5f, 184.5f);
-    private float stickSize = 57f;
-    private float jumpSize = 49f;
+    // Diseño por defecto, medido de la captura de referencia (coordenadas del motor, alto GAME_H = 320).
+    // d-pad abajo a la izquierda y salto abajo a la derecha, mismo tamaño y posición que la captura.
+    private const float DefEdge = 74f;         // centro X del d-pad desde el borde izquierdo
+    private const float DefJumpEdge = 74.9f;   // centro X del salto desde el borde derecho (ancla a RENDER_W)
+    private const float DefStickY = 245f;      // centro Y del d-pad
+    private const float DefJumpY = 250.5f;     // centro Y del salto
+    private const float DefStickSize = 83.4f;  // diámetro del d-pad
+    private const float DefJumpSize = 71.3f;   // diámetro del salto
+    private Vector2 stickCenter = new Vector2(DefEdge, DefStickY);
+    private Vector2 jumpCenter = new Vector2(DefJumpEdge, DefJumpY);
+    private float stickSize = DefStickSize;
+    private float jumpSize = DefJumpSize;
     private Vector2 stickPos;
     private float jumpScale = 1f;
     private bool jumpHeld;
@@ -132,7 +133,7 @@ public class Sonic4Ep1 : Game
     }
 
     private int CenterDX { get { return (RENDER_W - GAME_W) / 2; } }
-    private Rectangle GearRect { get { return ShiftX(GearBase, (int)Math.Round(RENDER_W - GAME_W - CurCropR)); } }
+    private Rectangle GearRect { get { return ShiftX(GearBase, (int)Math.Round(RENDER_W - GAME_W - CROP_RIGHT)); } }
     private Rectangle ListoRect { get { return ShiftX(ListoBase, CenterDX); } }
     private Rectangle MenuPanel { get { return ShiftX(MenuPanelBase, CenterDX); } }
     private Rectangle MenuVistaRect { get { return ShiftX(MenuVistaBase, CenterDX); } }
@@ -482,7 +483,7 @@ public class Sonic4Ep1 : Game
         {
             File.WriteAllLines(LayoutPath, new string[]
             {
-                "ver 4",
+                "ver 5",
                 "jump " + F(RENDER_W - jumpCenter.X) + "," + F(jumpCenter.Y) + "," + F(jumpSize),
                 "stick " + F(stickCenter.X) + "," + F(stickCenter.Y) + "," + F(stickSize),
                 "wide " + (wideView ? "1" : "0"),
@@ -505,9 +506,10 @@ public class Sonic4Ep1 : Game
                 return;
             }
             string[] lines = File.ReadAllLines(LayoutPath);
-            // Disposiciones de versiones anteriores (sin la línea ver 3) se ignoran y se usa el diseño nuevo.
-            int ver = lines.Length > 0 && lines[0] == "ver 4" ? 4 : (lines.Length > 0 && lines[0] == "ver 3" ? 3 : 0);
-            bool current = ver != 0;
+            // Posiciones de botones guardadas en versiones anteriores se ignoran: se usa el diseño nuevo.
+            // Vista, filtro y escala 3D de esas versiones sí se siguen leyendo.
+            int ver = lines.Length > 0 && lines[0] == "ver 5" ? 5 : 0;
+            bool current = ver == 5;
             foreach (string line in lines)
             {
                 string[] p = line.Split(' ');
@@ -552,8 +554,8 @@ public class Sonic4Ep1 : Game
                 float sz = float.Parse(v[2], CultureInfo.InvariantCulture);
                 if (p[0] == "jump")
                 {
-                    // ver 4: x es la distancia desde el borde derecho. ver 3: x era absoluto en el ancho de ese momento.
-                    float jx = ver == 4 ? RENDER_W - x : x;
+                    // x es la distancia desde el borde derecho.
+                    float jx = RENDER_W - x;
                     jumpCenter = new Vector2(jx, y);
                     jumpSize = sz;
                 }
@@ -578,9 +580,9 @@ public class Sonic4Ep1 : Game
 
     private void SetDefaultLayout()
     {
-        jumpCenter = new Vector2(RENDER_W - CROP_RIGHT - DefJumpEdge, DefY);
+        jumpCenter = new Vector2(RENDER_W - DefJumpEdge, DefJumpY);
         jumpSize = DefJumpSize;
-        stickCenter = new Vector2(CROP_LEFT + DefEdge, DefY);
+        stickCenter = new Vector2(DefEdge, DefStickY);
         stickSize = DefStickSize;
         stickPos = stickCenter;
     }
@@ -612,7 +614,7 @@ public class Sonic4Ep1 : Game
     }
 
     // Diagnóstico de proporciones: se activa con DEBUG_LAYOUT. Muestra tamaños reales de backbuffer, viewport y escala.
-    private const bool DEBUG_LAYOUT = true;
+    private const bool DEBUG_LAYOUT = false;
 
     private void DrawLayoutDebug(Rectangle r)
     {
@@ -927,38 +929,27 @@ public class Sonic4Ep1 : Game
         return Math.Abs(s - Math.Round(s)) < 0.001f;
     }
 
-    // Área donde se dibuja el juego. Escala uniforme (sin estirar) y sin recortar:
-    // como RENDER_W sigue la proporción de la pantalla, no quedan bandas negras.
-    // El alto del juego ocupa toda la pantalla (tope a tope, arriba y abajo) y el ancho sale de RENDER_W
-    // con la misma escala, así que no hay estiramiento ni franjas arriba o abajo.
-    // Zoom sin estirar: se recortan las franjas vacías de los laterales (en unidades de juego) y la
-    // escala es uniforme, así que nada se aplasta. Si el alto no alcanza, también se recorta arriba y abajo.
-    public const float CROP_LEFT = 106.5f;
-    public const float CROP_RIGHT = 106.5f;
-    // Altura visible desde arriba (unidades). Con 15 el HUD superior queda completo.
-    public const float CAM_TOP_UNITS = 15f;
+    // Sin recorte: el escenario de los laterales (franja extra del ultrawide) se ve completo.
+    public const float CROP_LEFT = 0f;
+    public const float CROP_RIGHT = 0f;
+    // Desplazamiento vertical del área de juego (en unidades). Con 0 se ve el alto completo, 0 a 320.
+    public const float CAM_TOP_UNITS = 0f;
 
     // Franja extra a cada lado del área 2D (en unidades de juego). La ortográfica 2D ya la dibuja;
     // aquí se amplía el área lógica (culling/scroll) para que el nivel y el fondo llenen los laterales.
     public static float WideExtra2D { get { return (RENDER_W - GAME_W) / 2f; } }
 
-    // El zoom solo aplica durante la partida. Título, menús y logos usan el marco completo, sin recorte.
-    private float CurCropL { get { return AppMain.IsStageTouchActive() ? CROP_LEFT : 0f; } }
-    private float CurCropR { get { return AppMain.IsStageTouchActive() ? CROP_RIGHT : 0f; } }
-
+    // Área donde se dibuja el juego: escala uniforme que llena el alto de la pantalla y ancho RENDER_W
+    // con la misma escala. RENDER_W sigue la proporción de la pantalla, así que no hay estiramiento.
+    // Si la proporción no coincide del todo, las bandas quedan simétricas a izquierda y derecha.
     public Rectangle GetGameRect()
     {
         Viewport vp = GraphicsDevice.Viewport;
-        bool play = AppMain.IsStageTouchActive();
-        float cl = CurCropL;
-        float cr = CurCropR;
-        float visibleW = RENDER_W - cl - cr;
-        float scale = Math.Max(vp.Width / visibleW, vp.Height / (float)GAME_H);
+        float scale = vp.Height / (float)GAME_H;
         int w = (int)Math.Round(RENDER_W * scale);
         int h = (int)Math.Round(GAME_H * scale);
-        int x = (int)Math.Round(-cl * scale);
-        // En partida la cámara se fija arriba (CAM_TOP_UNITS); fuera de partida se centra vertical como antes.
-        int y = play ? -(int)Math.Round(CAM_TOP_UNITS * scale) : (vp.Height - h) / 2;
+        int x = (vp.Width - w) / 2;
+        int y = (vp.Height - h) / 2;
         gameRect = new Rectangle(x, y, w, h);
         return gameRect;
     }
