@@ -137834,12 +137834,14 @@ public class AppMain
 	{
 		int ang = fovy >> 1;
 		double num = 1.0 / (double)nnTan(ang);
-		mtx.M00 = (float)(num / (double)aspect);
+		// Con la rotación de PROJECTION_CORRECTION, 'aspect' llega como alto/ancho. Así la escala queda
+		// igual que el alto original (sin zoom) y los píxeles salen cuadrados.
+		mtx.M00 = (float)num;
 		mtx.M01 = 0f;
 		mtx.M02 = 0f;
 		mtx.M03 = 0f;
 		mtx.M10 = 0f;
-		mtx.M11 = (float)num;
+		mtx.M11 = (float)(num * (double)aspect);
 		mtx.M12 = 0f;
 		mtx.M13 = 0f;
 		mtx.M20 = 0f;
@@ -180570,7 +180572,9 @@ public class AppMain
 		{
 			((GMS_FIX_MGR_WORK)gm_fix_tcb.work).flag |= 0x800 | 0x1000;
 		}
-		TouchCollection state = Sonic4Ep1.pInstance.GetGameTouches();
+		// En partida los toques van en coordenadas del juego; en menús (selección de fase, título,
+		// opciones, pausa) el contenido de 480 px va centrado, así que se descuenta el margen lateral.
+		TouchCollection state = IsStageTouchActive() ? Sonic4Ep1.pInstance.GetGameTouches() : Sonic4Ep1.pInstance.GetMenuTouches();
 		for (int i = 0; i < 4; i++)
 		{
 			touchMarked[i] = false;

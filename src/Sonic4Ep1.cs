@@ -883,6 +883,22 @@ public class Sonic4Ep1 : Game
         return gameRect;
     }
 
+    // Toques para menús: el contenido de 480 px está centrado en el ancho real, así que se resta el margen.
+    public TouchCollection GetMenuTouches()
+    {
+        Rectangle r = GetGameRect();
+        float sx = RENDER_W / (float)r.Width;
+        float sy = GAME_H / (float)r.Height;
+        float off = CenterDX;
+        List<TouchLocation> list = new List<TouchLocation>();
+        foreach (TouchLocation t in TouchPanel.GetState())
+        {
+            Vector2 p = new Vector2((t.Position.X - r.X) * sx - off, (t.Position.Y - r.Y) * sy);
+            list.Add(new TouchLocation(t.Id, t.State, p));
+        }
+        return new TouchCollection(list.ToArray());
+    }
+
     // Toques en coordenadas de pantalla -> coordenadas del juego (RENDER_W x GAME_H).
     public TouchCollection GetGameTouches()
     {
