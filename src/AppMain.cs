@@ -73237,11 +73237,12 @@ public class AppMain
 		nnMakePerspectiveMatrix(oBS_CAMERA.prj_pers_mtx, oBS_CAMERA.fovy, oBS_CAMERA.aspect, oBS_CAMERA.znear, oBS_CAMERA.zfar);
 		oBS_CAMERA.scale = 5f / 64f;
 		float num2 = g_obj.disp_height * oBS_CAMERA.scale * 0.5f * 1f;
+		// El aspecto ensancha el eje horizontal (top/bottom); el vertical queda como en el juego original.
 		float num3 = num2 * oBS_CAMERA.aspect;
-		oBS_CAMERA.left = 0f - num3;
-		oBS_CAMERA.right = num3;
-		oBS_CAMERA.bottom = 0f - num2;
-		oBS_CAMERA.top = num2;
+		oBS_CAMERA.left = 0f - num2;
+		oBS_CAMERA.right = num2;
+		oBS_CAMERA.bottom = 0f - num3;
+		oBS_CAMERA.top = num3;
 		nnMakeOrthoMatrix(oBS_CAMERA.prj_ortho_mtx, oBS_CAMERA.left, oBS_CAMERA.right, oBS_CAMERA.bottom, oBS_CAMERA.top, oBS_CAMERA.znear, oBS_CAMERA.zfar);
 		switch (oBS_CAMERA.camera_type)
 		{
@@ -73468,10 +73469,10 @@ public class AppMain
 			nnMakePerspectiveMatrix(oBS_CAMERA.prj_pers_mtx, oBS_CAMERA.fovy, oBS_CAMERA.aspect, oBS_CAMERA.znear, oBS_CAMERA.zfar);
 			float num = AMD_SCREEN_2D_WIDTH * oBS_CAMERA.scale * 0.5f * 1f;
 			float num2 = num * oBS_CAMERA.aspect;
-			oBS_CAMERA.left = 0f - num2;
-			oBS_CAMERA.right = num2;
-			oBS_CAMERA.bottom = 0f - num;
-			oBS_CAMERA.top = num;
+			oBS_CAMERA.left = 0f - num;
+			oBS_CAMERA.right = num;
+			oBS_CAMERA.bottom = 0f - num2;
+			oBS_CAMERA.top = num2;
 			nnMakeOrthoMatrix(oBS_CAMERA.prj_ortho_mtx, oBS_CAMERA.left, oBS_CAMERA.right, oBS_CAMERA.bottom, oBS_CAMERA.top, oBS_CAMERA.znear, oBS_CAMERA.zfar);
 			switch (oBS_CAMERA.camera_type)
 			{
@@ -87306,7 +87307,7 @@ public class AppMain
 				float num = 5f / 64f;
 				float num2 = g_obj.disp_height * num * 0.5f;
 				float num3 = num2 * nNS_CAMERA_TARGET_ROLL.Aspect;
-				nnMakeOrthoMatrix(nNS_MATRIX2, 0f - num3, num3, 0f - num2, num2, nNS_CAMERA_TARGET_ROLL.ZNear, nNS_CAMERA_TARGET_ROLL.ZFar);
+				nnMakeOrthoMatrix(nNS_MATRIX2, 0f - num2, num2, 0f - num3, num3, nNS_CAMERA_TARGET_ROLL.ZNear, nNS_CAMERA_TARGET_ROLL.ZFar);
 				oBS_DRAW_PARAM_3DNN_SET_CAMERA.prj_mtx.Assign(nNS_MATRIX2);
 				break;
 			}
