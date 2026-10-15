@@ -132,7 +132,7 @@ public class Sonic4Ep1 : Game
     }
 
     private int CenterDX { get { return (RENDER_W - GAME_W) / 2; } }
-    private Rectangle GearRect { get { return ShiftX(GearBase, RENDER_W - GAME_W); } }
+    private Rectangle GearRect { get { return ShiftX(GearBase, RENDER_W - GAME_W - CROP_RIGHT); } }
     private Rectangle ListoRect { get { return ShiftX(ListoBase, CenterDX); } }
     private Rectangle MenuPanel { get { return ShiftX(MenuPanelBase, CenterDX); } }
     private Rectangle MenuVistaRect { get { return ShiftX(MenuVistaBase, CenterDX); } }
@@ -221,12 +221,12 @@ public class Sonic4Ep1 : Game
         // Render a resolución nativa (480x320): los assets del motor son de esa resolución. Con muestreo de píxel
         // cercano (modo nítido) el escalado a la pantalla se ve como pixel art; con filtro suave se mezcla.
         // Render al doble de resolución interna: se reduce a la pantalla con menos pixelado.
-        RENDER_SCALE = 2;
+        RENDER_SCALE = 3;
         gameTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W * RENDER_SCALE, GAME_H * RENDER_SCALE, false, SurfaceFormat.Color, DepthFormat.Depth24);
         AppMain.pauseKeyX = (uint)PauseRect.X;
         // Versión mínima del frame para hacer el fondo difuminado de los laterales.
         blurTarget = new RenderTarget2D(base.GraphicsDevice, 32, 18, false, SurfaceFormat.Color, DepthFormat.None);
-        softTarget = new RenderTarget2D(base.GraphicsDevice, Math.Max(1, RENDER_W * 3 / 4), GAME_H * 3 / 4, false, SurfaceFormat.Color, DepthFormat.None);
+        softTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W * RENDER_SCALE, GAME_H * RENDER_SCALE, false, SurfaceFormat.Color, DepthFormat.None);
         SetDefaultLayout();
         try
         {
@@ -578,9 +578,9 @@ public class Sonic4Ep1 : Game
 
     private void SetDefaultLayout()
     {
-        jumpCenter = new Vector2(RENDER_W - DefJumpEdge, DefY);
+        jumpCenter = new Vector2(RENDER_W - CROP_RIGHT - DefJumpEdge, DefY);
         jumpSize = DefJumpSize;
-        stickCenter = new Vector2(DefEdge, DefY);
+        stickCenter = new Vector2(CROP_LEFT + DefEdge, DefY);
         stickSize = DefStickSize;
         stickPos = stickCenter;
     }
@@ -933,8 +933,12 @@ public class Sonic4Ep1 : Game
     // con la misma escala, así que no hay estiramiento ni franjas arriba o abajo.
     // Zoom sin estirar: se recortan las franjas vacías de los laterales (en unidades de juego) y la
     // escala es uniforme, así que nada se aplasta. Si el alto no alcanza, también se recorta arriba y abajo.
-    public const int CROP_LEFT = 45;
-    public const int CROP_RIGHT = 2;
+    public const int CROP_LEFT = 0;
+    public const int CROP_RIGHT = 0;
+
+    // Franja extra a cada lado del área 2D (en unidades de juego). La ortográfica 2D ya la dibuja;
+    // aquí se amplía el área lógica (culling/scroll) para que el nivel y el fondo llenen los laterales.
+    public static float WideExtra2D { get { return (RENDER_W - GAME_W) / 2f; } }
 
     public Rectangle GetGameRect()
     {
