@@ -83,15 +83,15 @@ public class Sonic4Ep1 : Game
     private Texture2D gearTex;
     // Diseño por defecto, medido de la captura del dispositivo (coordenadas del motor, alto GAME_H = 320).
     // d-pad abajo a la izquierda y salto abajo a la derecha. Lo usan los builds que no tengan pad_layout.txt.
-    private const float DefEdge = 67f;        // centro X del d-pad desde el borde izquierdo
-    private const float DefJumpEdge = 68f;    // centro X del salto desde el borde derecho (ancla a RENDER_W)
-    private const float DefY = 239f;          // centro Y de ambos botones
-    private const float DefStickSize = 74f;   // diámetro del d-pad
-    private const float DefJumpSize = 64f;    // diámetro del salto
-    private Vector2 stickCenter = new Vector2(100f, 239f);
-    private Vector2 jumpCenter = new Vector2(592f, 239f);
-    private float stickSize = 74f;
-    private float jumpSize = 64f;
+    private const float DefEdge = 51.5f;        // centro X del d-pad desde el borde izquierdo
+    private const float DefJumpEdge = 52f;    // centro X del salto desde el borde derecho (ancla a RENDER_W)
+    private const float DefY = 184.5f;          // centro Y de ambos botones
+    private const float DefStickSize = 57f;   // diámetro del d-pad
+    private const float DefJumpSize = 49f;    // diámetro del salto
+    private Vector2 stickCenter = new Vector2(158f, 184.5f);
+    private Vector2 jumpCenter = new Vector2(534.5f, 184.5f);
+    private float stickSize = 57f;
+    private float jumpSize = 49f;
     private Vector2 stickPos;
     private float jumpScale = 1f;
     private bool jumpHeld;
@@ -132,7 +132,7 @@ public class Sonic4Ep1 : Game
     }
 
     private int CenterDX { get { return (RENDER_W - GAME_W) / 2; } }
-    private Rectangle GearRect { get { return ShiftX(GearBase, RENDER_W - GAME_W - CROP_RIGHT); } }
+    private Rectangle GearRect { get { return ShiftX(GearBase, (int)Math.Round(RENDER_W - GAME_W - CROP_RIGHT)); } }
     private Rectangle ListoRect { get { return ShiftX(ListoBase, CenterDX); } }
     private Rectangle MenuPanel { get { return ShiftX(MenuPanelBase, CenterDX); } }
     private Rectangle MenuVistaRect { get { return ShiftX(MenuVistaBase, CenterDX); } }
@@ -933,8 +933,10 @@ public class Sonic4Ep1 : Game
     // con la misma escala, así que no hay estiramiento ni franjas arriba o abajo.
     // Zoom sin estirar: se recortan las franjas vacías de los laterales (en unidades de juego) y la
     // escala es uniforme, así que nada se aplasta. Si el alto no alcanza, también se recorta arriba y abajo.
-    public const int CROP_LEFT = 33;
-    public const int CROP_RIGHT = 33;
+    public const float CROP_LEFT = 106.5f;
+    public const float CROP_RIGHT = 106.5f;
+    // Altura visible desde arriba (unidades). Con 15 el HUD superior queda completo.
+    public const float CAM_TOP_UNITS = 15f;
 
     // Franja extra a cada lado del área 2D (en unidades de juego). La ortográfica 2D ya la dibuja;
     // aquí se amplía el área lógica (culling/scroll) para que el nivel y el fondo llenen los laterales.
@@ -948,7 +950,7 @@ public class Sonic4Ep1 : Game
         int w = (int)Math.Round(RENDER_W * scale);
         int h = (int)Math.Round(GAME_H * scale);
         int x = (int)Math.Round(-CROP_LEFT * scale);
-        int y = (vp.Height - h) / 2;
+        int y = -(int)Math.Round(CAM_TOP_UNITS * scale);
         gameRect = new Rectangle(x, y, w, h);
         return gameRect;
     }
