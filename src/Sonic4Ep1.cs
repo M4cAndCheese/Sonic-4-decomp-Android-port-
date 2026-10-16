@@ -977,7 +977,8 @@ public class Sonic4Ep1 : Game
     // Zoom del escenario en niveles: oculta los bordes que el nivel no cubre en ultrawide.
     // Solo afecta a lo que se dibuja del juego; los controles y el toque siguen en el rectángulo base.
     // Zoom solo en niveles: tapa el borde del mapa en ultrawide. El HUD se redibuja sin zoom y los controles no cambian.
-    private const float STAGE_ZOOM = 1.4f;
+    // Sin zoom: el zoom agrandaba resultados, carga y fases especiales, y el corte del HUD dejaba una línea.
+    private const float STAGE_ZOOM = 1f;
     // Alto de la franja de HUD superior (unidades de juego) que se muestra sin zoom.
     private const float HUD_BAND_UNITS = 88f;
 
