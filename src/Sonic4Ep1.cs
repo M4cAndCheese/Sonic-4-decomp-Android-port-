@@ -120,19 +120,45 @@ public class Sonic4Ep1 : Game
     private HashSet<int> prevTouchIds = new HashSet<int>();
     private bool menuOpen;
     private bool editing;
+    // Editor de HUD: tamaño (1 = original) y desplazamiento en píxeles de juego (+ derecha / + abajo).
+    private bool hudEditing;
+    private float hudScale = 1f;
+    private float hudOffX;
+    private float hudOffY;
+    // Signos del desplazamiento: si al mover el HUD va al revés, cambia a -1.
+    public const float HUD_X_SIGN = 1f;
+    public const float HUD_Y_SIGN = 1f;
+    private const float HUD_STEP_PX = 4f;
+    private const float HUD_SCALE_STEP = 0.05f;
+    private const float HUD_MIN_SCALE = 0.5f;
+    private const float HUD_MAX_SCALE = 1.5f;
+    private const float HUD_MAX_OFFSET_PX = 200f;
     private bool wideView = true;
     private int dragId = -1;
     private int dragKind = -1; // 0 mover joystick, 1 mover salto, 2 redimensionar joystick, 3 redimensionar salto
     // Rectángulos diseñados para 480 px. El engranaje va anclado a la derecha y el resto centrado.
     private static readonly Rectangle GearBase = new Rectangle(438, 52, 32, 32);
     private static readonly Rectangle ListoBase = new Rectangle(190, 8, 100, 28);
-    private static readonly Rectangle MenuPanelBase = new Rectangle(140, 60, 200, 252);
-    private static readonly Rectangle MenuVistaBase = new Rectangle(160, 100, 160, 26);
-    private static readonly Rectangle MenuSoftBase = new Rectangle(160, 134, 160, 26);
-    private static readonly Rectangle MenuEditBase = new Rectangle(160, 168, 160, 26);
-    private static readonly Rectangle MenuResetBase = new Rectangle(160, 202, 160, 26);
-    private static readonly Rectangle MenuCloseBase = new Rectangle(160, 236, 160, 26);
-    private static readonly Rectangle MenuScaleBase = new Rectangle(160, 270, 160, 26);
+    private static readonly Rectangle MenuPanelBase = new Rectangle(140, 80, 200, 228);
+    private static readonly Rectangle MenuVistaBase = new Rectangle(160, 92, 160, 26);
+    private static readonly Rectangle MenuSoftBase = new Rectangle(160, 122, 160, 26);
+    private static readonly Rectangle MenuEditBase = new Rectangle(160, 152, 160, 26);
+    private static readonly Rectangle MenuResetBase = new Rectangle(160, 182, 160, 26);
+    private static readonly Rectangle MenuScaleBase = new Rectangle(160, 212, 160, 26);
+    private static readonly Rectangle MenuHudBase = new Rectangle(160, 242, 160, 26);
+    private static readonly Rectangle MenuCloseBase = new Rectangle(160, 272, 160, 26);
+    // Panel del editor de HUD.
+    private static readonly Rectangle HudPanelBase = new Rectangle(140, 60, 200, 196);
+    private static readonly Rectangle HudPlusBase = new Rectangle(160, 70, 76, 26);
+    private static readonly Rectangle HudMinusBase = new Rectangle(244, 70, 76, 26);
+    private static readonly Rectangle HudUpBase = new Rectangle(196, 104, 88, 24);
+    private static readonly Rectangle HudLeftBase = new Rectangle(160, 132, 76, 24);
+    private static readonly Rectangle HudRightBase = new Rectangle(244, 132, 76, 24);
+    private static readonly Rectangle HudDownBase = new Rectangle(196, 160, 88, 24);
+    private static readonly Rectangle HudExportBase = new Rectangle(160, 192, 76, 26);
+    private static readonly Rectangle HudImportBase = new Rectangle(244, 192, 76, 26);
+    private static readonly Rectangle HudResetBase = new Rectangle(160, 224, 76, 26);
+    private static readonly Rectangle HudDoneBase = new Rectangle(244, 224, 76, 26);
 
     // Botón de pausa dibujado por el motor: en 480 px va en x=215..331; con ultrawide se desplaza CenterDX.
     private Rectangle PauseRect { get { return new Rectangle(CenterDX + 215, 0, 116, 60); } }
@@ -151,6 +177,18 @@ public class Sonic4Ep1 : Game
     private Rectangle MenuEditRect { get { return ShiftX(MenuEditBase, CenterDX); } }
     private Rectangle MenuResetRect { get { return ShiftX(MenuResetBase, CenterDX); } }
     private Rectangle MenuCloseRect { get { return ShiftX(MenuCloseBase, CenterDX); } }
+    private Rectangle MenuHudRect { get { return ShiftX(MenuHudBase, CenterDX); } }
+    private Rectangle HudPanel { get { return ShiftX(HudPanelBase, CenterDX); } }
+    private Rectangle HudPlusRect { get { return ShiftX(HudPlusBase, CenterDX); } }
+    private Rectangle HudMinusRect { get { return ShiftX(HudMinusBase, CenterDX); } }
+    private Rectangle HudUpRect { get { return ShiftX(HudUpBase, CenterDX); } }
+    private Rectangle HudLeftRect { get { return ShiftX(HudLeftBase, CenterDX); } }
+    private Rectangle HudRightRect { get { return ShiftX(HudRightBase, CenterDX); } }
+    private Rectangle HudDownRect { get { return ShiftX(HudDownBase, CenterDX); } }
+    private Rectangle HudExportRect { get { return ShiftX(HudExportBase, CenterDX); } }
+    private Rectangle HudImportRect { get { return ShiftX(HudImportBase, CenterDX); } }
+    private Rectangle HudResetRect { get { return ShiftX(HudResetBase, CenterDX); } }
+    private Rectangle HudDoneRect { get { return ShiftX(HudDoneBase, CenterDX); } }
     private Rectangle MenuScaleRect { get { return ShiftX(MenuScaleBase, CenterDX); } }
 
     protected float deviceMusicVolume;
@@ -540,18 +578,31 @@ public class Sonic4Ep1 : Game
         return v.ToString(CultureInfo.InvariantCulture);
     }
 
+    private static string HudExportPath
+    {
+        get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "layout_export.txt"); }
+    }
+
     private void SaveLayout()
+    {
+        SaveLayoutTo(LayoutPath);
+    }
+
+    private void SaveLayoutTo(string path)
     {
         try
         {
-            File.WriteAllLines(LayoutPath, new string[]
+            File.WriteAllLines(path, new string[]
             {
                 "ver 5",
                 "jump " + F(RENDER_W - jumpCenter.X) + "," + F(jumpCenter.Y) + "," + F(jumpSize),
                 "stick " + F(stickCenter.X) + "," + F(stickCenter.Y) + "," + F(stickSize),
                 "wide " + (wideView ? "1" : "0"),
                 "soft " + (softFilter ? "1" : "0"),
-                "k3d " + F(Scale3DSteps[scale3DIndex])
+                "k3d " + F(Scale3DSteps[scale3DIndex]),
+                "hud_s " + F(hudScale),
+                "hud_x " + F(hudOffX),
+                "hud_y " + F(hudOffY)
             });
         }
         catch (Exception)
@@ -562,13 +613,18 @@ public class Sonic4Ep1 : Game
 
     private void LoadLayout()
     {
+        LoadLayoutFrom(LayoutPath);
+    }
+
+    private void LoadLayoutFrom(string path)
+    {
         try
         {
-            if (!File.Exists(LayoutPath))
+            if (!File.Exists(path))
             {
                 return;
             }
-            string[] lines = File.ReadAllLines(LayoutPath);
+            string[] lines = File.ReadAllLines(path);
             // Posiciones de botones guardadas en versiones anteriores se ignoran: se usa el diseño nuevo.
             // Vista, filtro y escala 3D de esas versiones sí se siguen leyendo.
             int ver = lines.Length > 0 && lines[0] == "ver 5" ? 5 : 0;
@@ -588,6 +644,17 @@ public class Sonic4Ep1 : Game
                 if (p[0] == "soft")
                 {
                     softFilter = p[1] == "1";
+                    continue;
+                }
+                if (p[0] == "hud_s" || p[0] == "hud_x" || p[0] == "hud_y")
+                {
+                    float hv;
+                    if (float.TryParse(p[1], NumberStyles.Float, CultureInfo.InvariantCulture, out hv))
+                    {
+                        if (p[0] == "hud_s") { hudScale = Clamp(hv, HUD_MIN_SCALE, HUD_MAX_SCALE); }
+                        else if (p[0] == "hud_x") { hudOffX = Clamp(hv, -HUD_MAX_OFFSET_PX, HUD_MAX_OFFSET_PX); }
+                        else { hudOffY = Clamp(hv, -HUD_MAX_OFFSET_PX, HUD_MAX_OFFSET_PX); }
+                    }
                     continue;
                 }
                 if (p[0] == "k3d")
@@ -653,7 +720,15 @@ public class Sonic4Ep1 : Game
     private void ResetLayout()
     {
         SetDefaultLayout();
+        ResetHudLayout();
         SaveLayout();
+    }
+
+    private void ResetHudLayout()
+    {
+        hudScale = 1f;
+        hudOffX = 0f;
+        hudOffY = 0f;
     }
 
     private void UpdateTouchFrame()
@@ -734,6 +809,7 @@ public class Sonic4Ep1 : Game
         {
             menuOpen = false;
             editing = false;
+            hudEditing = false;
             dragId = -1;
             return;
         }
@@ -753,6 +829,11 @@ public class Sonic4Ep1 : Game
         {
             HandleMenu(newTouches);
             DrawMenu();
+        }
+        else if (hudEditing)
+        {
+            HandleHudEdit(newTouches);
+            DrawHudEdit();
         }
         else if (editing)
         {
@@ -868,6 +949,11 @@ public class Sonic4Ep1 : Game
                 OpenGL.ReapplyProjectionAspect();
                 SaveLayout();
             }
+            else if (InRect(t.Position, MenuHudRect))
+            {
+                menuOpen = false;
+                hudEditing = true;
+            }
             else if (InRect(t.Position, MenuCloseRect))
             {
                 menuOpen = false;
@@ -883,6 +969,7 @@ public class Sonic4Ep1 : Game
         DrawButton(MenuEditRect, "Editar controles");
         DrawButton(MenuResetRect, "Restablecer diseno");
         DrawButton(MenuScaleRect, "Escala 3D " + Scale3DSteps[scale3DIndex].ToString("0.00", CultureInfo.InvariantCulture));
+        DrawButton(MenuHudRect, "Editar HUD");
         DrawButton(MenuCloseRect, "Cerrar");
     }
 
@@ -958,6 +1045,91 @@ public class Sonic4Ep1 : Game
             SaveLayout();
         }
         stickPos = stickCenter;
+    }
+
+    // Editor de HUD: toques en el panel. Los cambios se guardan al momento.
+    private void HandleHudEdit(List<TouchLocation> newTouches)
+    {
+        bool changed = false;
+        foreach (TouchLocation t in newTouches)
+        {
+            if (InRect(t.Position, HudPlusRect))
+            {
+                hudScale = (float)Math.Round(Clamp(hudScale + HUD_SCALE_STEP, HUD_MIN_SCALE, HUD_MAX_SCALE), 2);
+                changed = true;
+            }
+            else if (InRect(t.Position, HudMinusRect))
+            {
+                hudScale = (float)Math.Round(Clamp(hudScale - HUD_SCALE_STEP, HUD_MIN_SCALE, HUD_MAX_SCALE), 2);
+                changed = true;
+            }
+            else if (InRect(t.Position, HudUpRect))
+            {
+                hudOffY = Clamp(hudOffY - HUD_STEP_PX, -HUD_MAX_OFFSET_PX, HUD_MAX_OFFSET_PX);
+                changed = true;
+            }
+            else if (InRect(t.Position, HudDownRect))
+            {
+                hudOffY = Clamp(hudOffY + HUD_STEP_PX, -HUD_MAX_OFFSET_PX, HUD_MAX_OFFSET_PX);
+                changed = true;
+            }
+            else if (InRect(t.Position, HudLeftRect))
+            {
+                hudOffX = Clamp(hudOffX - HUD_STEP_PX, -HUD_MAX_OFFSET_PX, HUD_MAX_OFFSET_PX);
+                changed = true;
+            }
+            else if (InRect(t.Position, HudRightRect))
+            {
+                hudOffX = Clamp(hudOffX + HUD_STEP_PX, -HUD_MAX_OFFSET_PX, HUD_MAX_OFFSET_PX);
+                changed = true;
+            }
+            else if (InRect(t.Position, HudExportRect))
+            {
+                SaveLayoutTo(HudExportPath);
+            }
+            else if (InRect(t.Position, HudImportRect))
+            {
+                if (File.Exists(HudExportPath))
+                {
+                    LoadLayoutFrom(HudExportPath);
+                    changed = true;
+                }
+            }
+            else if (InRect(t.Position, HudResetRect))
+            {
+                ResetHudLayout();
+                changed = true;
+            }
+            else if (InRect(t.Position, HudDoneRect))
+            {
+                hudEditing = false;
+                changed = true;
+            }
+        }
+        if (changed)
+        {
+            SaveLayout();
+        }
+    }
+
+    private void DrawHudEdit()
+    {
+        spriteBatch.Draw(pixelTex, HudPanel, new Color(16, 20, 18, 235));
+        DrawButton(HudPlusRect, "Tam +");
+        DrawButton(HudMinusRect, "Tam -");
+        DrawButton(HudUpRect, "Arriba");
+        DrawButton(HudLeftRect, "Izq");
+        DrawButton(HudRightRect, "Der");
+        DrawButton(HudDownRect, "Abajo");
+        DrawButton(HudExportRect, "Exportar");
+        DrawButton(HudImportRect, "Importar");
+        DrawButton(HudResetRect, "Restab.");
+        DrawButton(HudDoneRect, "Listo");
+        if (fntKootenay != null)
+        {
+            string info = "HUD " + Math.Round(hudScale * 100f) + "%  X " + F(hudOffX) + "  Y " + F(hudOffY);
+            spriteBatch.DrawString(fntKootenay, info, new Vector2(HudPanel.X + 6, HudPanel.Bottom + 4), Color.White, 0f, Vector2.Zero, 0.5f, SpriteEffects.None, 0f);
+        }
     }
 
     private void DrawEdit()
@@ -1038,11 +1210,11 @@ public class Sonic4Ep1 : Game
     // Alto de la franja de HUD superior (unidades de juego) que se muestra sin zoom.
     private const float HUD_BAND_UNITS = 88f;
 
-    // Zoom que se aplica al escenario en este momento (1 si no hay zoom). Lo usa el HUD para compensarlo.
-    public float HudScale
-    {
-        get { return (AppMain.IsStageTouchActive() && !AppMain.IsBootScreenNow() && !AppMain.IsResultScreenNow()) ? STAGE_ZOOM : 1f; }
-    }
+    // Valores del editor de HUD que usa AppMain.AmMakeOrtho2D (unidades de ortho: 2.25 por píxel de juego).
+    public float HudUserScale { get { return hudScale; } }
+    public float HudZoomNow { get { return (AppMain.IsStageTouchActive() && !AppMain.IsBootScreenNow() && !AppMain.IsResultScreenNow()) ? STAGE_ZOOM : 1f; } }
+    public float HudOffsetUnitsX { get { return hudOffX * 2.25f * HUD_X_SIGN; } }
+    public float HudOffsetUnitsY { get { return hudOffY * 2.25f * HUD_Y_SIGN; } }
 
     // Área base donde se dibuja el juego: escala uniforme que llena el alto y ancho RENDER_W.
     private Rectangle GetBaseRect()
