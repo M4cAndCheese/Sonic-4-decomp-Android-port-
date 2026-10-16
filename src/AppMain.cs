@@ -76368,7 +76368,7 @@ public class AppMain
 		}
 		amInLayerPass = true;
 		// Pausa y resultados (uiLayer sin hud) van a su capa propia; el HUD a la suya.
-		inst.BeginHudPass(!command.hud);
+		inst.BeginHudPass();
 		try
 		{
 			draw(command, drawflag);
