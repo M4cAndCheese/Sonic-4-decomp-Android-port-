@@ -538,6 +538,14 @@ public class Sonic4Ep1 : Game
                 spriteBatch.Draw(hudTarget, HudDrawRect(), Color.White);
                 spriteBatch.End();
             }
+            // Diagnóstico: marco del HUD y del escenario para ver qué parte queda cortada.
+            if (HUD_DEBUG_FRAMES && !boot)
+            {
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null);
+                DrawFrame(HudDrawRect());
+                DrawFrame(GetGameRect());
+                spriteBatch.End();
+            }
             // En fases especiales no hay controles en pantalla: se juega moviendo el celular.
             if (!boot && !AppMain.IsSpecialStageNow())
             {
@@ -1283,6 +1291,8 @@ public class Sonic4Ep1 : Game
     // Zoom propio del HUD (1 = tamaño de la captura). Solo afecta a la capa del HUD, no al nivel.
     // Se ancla arriba y centrado en horizontal.
     public const float HUD_ZOOM = 1f;
+    // Diagnóstico: true dibuja un marco en el área del HUD y en el área del escenario.
+    public const bool HUD_DEBUG_FRAMES = true;
     // HUD, pausa y resultados: tamaño base por defecto, con HUD_ZOOM aplicado. El nivel no se toca.
     private Rectangle HudDrawRect()
     {
