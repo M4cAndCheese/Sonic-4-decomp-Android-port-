@@ -58,6 +58,7 @@ public class Sonic4Ep1 : Game
     // Límite de tamaño de textura del render target (seguro en casi todos los Android).
     public const int MAX_TARGET_DIM = 4096;
     private RenderTarget2D gameTarget;
+    private RenderTarget2D hudTarget;
     private Rectangle gameRect;
     private RenderTarget2D blurTarget;
     private RenderTarget2D softTarget;
@@ -223,7 +224,11 @@ public class Sonic4Ep1 : Game
         // cercano (modo nítido) el escalado a la pantalla se ve como pixel art; con filtro suave se mezcla.
         // Render al doble de resolución interna: se reduce a la pantalla con menos pixelado.
         RENDER_SCALE = 3;
-        gameTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W * RENDER_SCALE, GAME_H * RENDER_SCALE, false, SurfaceFormat.Color, DepthFormat.Depth24);
+        // PreserveContents: el juego cambia de capa al dibujar el HUD y debe conservar la imagen del escenario.
+        gameTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W * RENDER_SCALE, GAME_H * RENDER_SCALE, false, SurfaceFormat.Color, DepthFormat.Depth24, 0, RenderTargetUsage.PreserveContents);
+        hudTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W * RENDER_SCALE, GAME_H * RENDER_SCALE, false, SurfaceFormat.Color, DepthFormat.Depth24, 0, RenderTargetUsage.PreserveContents);
+        AppMain.hud_layer_target = hudTarget;
+        AppMain.game_layer_target = gameTarget;
         AppMain.pauseKeyX = (uint)PauseRect.X;
         // Versión mínima del frame para hacer el fondo difuminado de los laterales.
         blurTarget = new RenderTarget2D(base.GraphicsDevice, 32, 18, false, SurfaceFormat.Color, DepthFormat.None);
@@ -387,6 +392,11 @@ public class Sonic4Ep1 : Game
         inputDataRead = true;
         OpenGL.drawPrimitives_Count = 0;
         OpenGL.drawVertexBuffer_Count = 0;
+        if (hudTarget != null)
+        {
+            GraphicsDevice.SetRenderTarget(hudTarget);
+            GraphicsDevice.Clear(Color.Transparent);
+        }
         if (gameTarget != null)
         {
             GraphicsDevice.SetRenderTarget(gameTarget);
@@ -446,6 +456,11 @@ public class Sonic4Ep1 : Game
             Texture2D gameTex = softFilter && softTarget != null ? (Texture2D)softTarget : gameTarget;
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, gameSampler, null, null);
             spriteBatch.Draw(gameTex, GetGameRect(), Color.White);
+            // HUD en su propia capa, sin zoom: se mantiene en su posición original.
+            if (hudTarget != null)
+            {
+                spriteBatch.Draw(hudTarget, GetHudRect(), Color.White);
+            }
             spriteBatch.End();
             // En fases especiales no hay controles en pantalla: se juega moviendo el celular.
             if (!boot && !AppMain.IsSpecialStageNow())
@@ -981,6 +996,24 @@ public class Sonic4Ep1 : Game
         int h = (int)Math.Round(GAME_H * scale);
         int x = (vp.Width - w) / 2;
         int y = (vp.Height - h) / 2;
+        return new Rectangle(x, y, w, h);
+    }
+
+    // ---------- HUD editable ----------
+    // Valores de release: el HUD queda igual que el original (escala 1, sin desplazamiento).
+    // Para ajustarlo: HUD_SCALE escala el marcador; HUD_OFFSET_X y HUD_OFFSET_Y lo mueven como fracción del área base.
+    private const float HUD_SCALE = 1f;
+    private const float HUD_OFFSET_X = 0f;
+    private const float HUD_OFFSET_Y = 0f;
+
+    // Área donde se dibuja el HUD: el área base con escala y desplazamiento editables.
+    public Rectangle GetHudRect()
+    {
+        Rectangle b = GetBaseRect();
+        int w = (int)Math.Round(b.Width * HUD_SCALE);
+        int h = (int)Math.Round(b.Height * HUD_SCALE);
+        int x = b.X + (b.Width - w) / 2 + (int)Math.Round(HUD_OFFSET_X * b.Width);
+        int y = b.Y + (b.Height - h) / 2 + (int)Math.Round(HUD_OFFSET_Y * b.Height);
         return new Rectangle(x, y, w, h);
     }
 

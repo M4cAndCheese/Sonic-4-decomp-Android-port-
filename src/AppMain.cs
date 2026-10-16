@@ -65781,6 +65781,9 @@ public class AppMain
 	private static float[] nnCosTable;
 
 	public static SpriteBatch m_spriteBatch;
+	// Capa del HUD (marcador fijo) separada del escenario: se dibuja sin zoom encima del juego.
+	public static RenderTarget2D hud_layer_target;
+	public static RenderTarget2D game_layer_target;
 
 	private static bool _am_iPhone_quit_req;
 
@@ -97689,8 +97692,27 @@ public class AppMain
 			GMS_FIX_MGR_WORK gMS_FIX_MGR_WORK = (GMS_FIX_MGR_WORK)gm_fix_tcb.work;
 			if ((gMS_FIX_MGR_WORK.flag & 2) == 0)
 			{
+				GmFixHudRouteBegin();
 				ObjDrawActionSummary(obj_work);
+				GmFixHudRouteEnd();
 			}
+		}
+	}
+
+	// Las piezas del HUD se dibujan en su propia capa, para poder moverlas o escalarlas sin tocar el escenario.
+	private static void GmFixHudRouteBegin()
+	{
+		if (hud_layer_target != null && game_layer_target != null)
+		{
+			hud_layer_target.GraphicsDevice.SetRenderTarget(hud_layer_target);
+		}
+	}
+
+	private static void GmFixHudRouteEnd()
+	{
+		if (hud_layer_target != null && game_layer_target != null)
+		{
+			hud_layer_target.GraphicsDevice.SetRenderTarget(game_layer_target);
 		}
 	}
 
