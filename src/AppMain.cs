@@ -177765,13 +177765,14 @@ public class AppMain
 		g_obj.cam_scale_center[1][1] = (short)(lcd_size_y / 2);
 		g_obj.disp_width = disp_width;
 		g_obj.disp_height = disp_height;
-		g_obj.lcd_size[0] = lcd_size_x;
-		g_obj.lcd_size[1] = lcd_size_y;
-		// Ventana de recorte horizontal: con pantalla ultrawide se amplía al ancho real de render,
-		// así los objetos y el terreno de los laterales se crean y se dibujan (en 480 px quedan igual).
-		g_obj.clip_lcd_size[0] = (short)Math.Max((int)lcd_size_x, (int)Sonic4Ep1.RENDER_W);
-		// Ventana vertical: al menos la altura real de la pantalla, para que el terreno no se corte arriba ni abajo.
-		g_obj.clip_lcd_size[1] = (short)Math.Max((int)lcd_size_y, (int)Sonic4Ep1.GAME_H);
+		// Ventana de objetos = pantalla real. La cámara guarda su esquina izquierda como centro - lcd/2,
+		// así que lcd_size y clip_lcd_size deben usar el mismo tamaño para que la ventana quede centrada.
+		short viewW = (short)Math.Max((int)lcd_size_x, (int)Sonic4Ep1.RENDER_W);
+		short viewH = (short)Math.Max((int)lcd_size_y, (int)Sonic4Ep1.GAME_H);
+		g_obj.lcd_size[0] = viewW;
+		g_obj.lcd_size[1] = viewH;
+		g_obj.clip_lcd_size[0] = viewW;
+		g_obj.clip_lcd_size[1] = viewH;
 		g_obj.load_drawflag = 0u;
 		g_obj.drawflag = 0u;
 		g_obj.glb_camera_id = -1;

@@ -94,3 +94,9 @@
   así que las colinas y objetos de los laterales no se creaban ni dibujaban.
 - En pantallas de 480 px no cambia nada.
 - Pendiente: probar en el teléfono; si aparecen objetos fuera del mapa o hay errores de recorte en los bordes, es el siguiente punto a revisar.
+
+## Ventana de objetos centrada en la pantalla real
+- `AppMain.ObjInit`: `lcd_size` y `clip_lcd_size` usan el mismo tamaño (`RENDER_W` x `GAME_H`, o el original si es mayor).
+  La cámara guarda su esquina izquierda como centro - lcd/2, así que antes la ventana quedaba corrida a la derecha:
+  se perdían objetos y terreno a la izquierda, y en vertical se cortaba arriba y abajo.
+- Con esto, la ventana de creación de terreno, el recorte de objetos y los límites de la cámara usan la misma medida.
