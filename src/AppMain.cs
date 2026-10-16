@@ -97682,6 +97682,39 @@ public class AppMain
 		}
 	}
 
+	// Proyección 2D del HUD: se amplía la ventana por el zoom del escenario (centrada), así el HUD se dibuja
+	// más chico dentro del escenario y el zoom lo devuelve a su tamaño original.
+	private static bool gmFixHudProjBegin()
+	{
+		if (Sonic4Ep1.pInstance == null)
+		{
+			return false;
+		}
+		float k = Sonic4Ep1.pInstance.HudScale;
+		if (k <= 1f || nngProjectionType != 1)
+		{
+			return false;
+		}
+		float d = 1.125f * (Sonic4Ep1.RENDER_W - Sonic4Ep1.GAME_W);
+		if (d < 0f)
+		{
+			d = 0f;
+		}
+		float halfX = (540f + d) * k;
+		float halfY = 360f * k;
+		NNS_MATRIX m = new NNS_MATRIX();
+		nnMakeOrthoMatrix(m, 360f - halfY, 360f + halfY, 540f + halfX, 540f - halfX, 1f, 3f);
+		nnSetProjection(m, 1);
+		return true;
+	}
+
+	private static void gmFixHudProjEnd()
+	{
+		NNS_MATRIX m = new NNS_MATRIX();
+		AmMakeOrtho2D(m);
+		nnSetProjection(m, 1);
+	}
+
 	private static void gmFixSubpartOutFunc(OBS_OBJECT_WORK obj_work)
 	{
 		if (gm_fix_tcb != null)
@@ -97690,11 +97723,9 @@ public class AppMain
 			if ((gMS_FIX_MGR_WORK.flag & 2) == 0)
 			{
 				// El HUD se dibuja en su propia capa, sin el zoom del escenario.
-				// Si el dibujo del HUD falla, la capa siempre se devuelve al escenario (evita pantalla negra).
-				if (Sonic4Ep1.pInstance != null)
-				{
-					Sonic4Ep1.pInstance.BeginHudPass();
-				}
+				// El HUD se dibuja con una proyección un poco más amplia que compensa el zoom del escenario:
+				// así queda a su tamaño original. Si el dibujo falla, la proyección siempre se restaura.
+				bool comp = gmFixHudProjBegin();
 				try
 				{
 					ObjDrawActionSummary(obj_work);
@@ -97704,9 +97735,9 @@ public class AppMain
 				}
 				finally
 				{
-					if (Sonic4Ep1.pInstance != null)
+					if (comp)
 					{
-						Sonic4Ep1.pInstance.EndHudPass();
+						gmFixHudProjEnd();
 					}
 				}
 			}

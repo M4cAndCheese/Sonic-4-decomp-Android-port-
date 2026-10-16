@@ -1038,6 +1038,12 @@ public class Sonic4Ep1 : Game
     // Alto de la franja de HUD superior (unidades de juego) que se muestra sin zoom.
     private const float HUD_BAND_UNITS = 88f;
 
+    // Zoom que se aplica al escenario en este momento (1 si no hay zoom). Lo usa el HUD para compensarlo.
+    public float HudScale
+    {
+        get { return (AppMain.IsStageTouchActive() && !AppMain.IsBootScreenNow() && !AppMain.IsResultScreenNow()) ? STAGE_ZOOM : 1f; }
+    }
+
     // Área base donde se dibuja el juego: escala uniforme que llena el alto y ancho RENDER_W.
     private Rectangle GetBaseRect()
     {
