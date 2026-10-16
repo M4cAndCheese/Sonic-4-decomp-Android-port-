@@ -1280,10 +1280,20 @@ public class Sonic4Ep1 : Game
         return new Rectangle(x, y, w, h);
     }
 
-    // HUD, pausa, resultados y mensajes: tamaño base (sin zoom). Solo los niveles y fases especiales llevan zoom.
+    // Zoom propio del HUD (1 = tamaño de la captura). Solo afecta a la capa del HUD, no al nivel.
+    // Se ancla arriba y centrado en horizontal.
+    public const float HUD_ZOOM = 1f;
+    // HUD, pausa y resultados: tamaño base por defecto, con HUD_ZOOM aplicado. El nivel no se toca.
     private Rectangle HudDrawRect()
     {
-        return GetBaseRect();
+        Rectangle b = GetBaseRect();
+        if (HUD_ZOOM == 1f)
+        {
+            return b;
+        }
+        int w = (int)Math.Round(b.Width * HUD_ZOOM);
+        int h = (int)Math.Round(b.Height * HUD_ZOOM);
+        return new Rectangle(b.X + (b.Width - w) / 2, b.Y, w, h);
     }
 
     // Área donde se dibuja el escenario: el base, con zoom centrado en niveles.
@@ -1295,7 +1305,8 @@ public class Sonic4Ep1 : Game
         int w = (int)Math.Round(b.Width * z);
         int h = (int)Math.Round(b.Height * z);
         int x = b.X + (b.Width - w) / 2;
-        int y = b.Y + (b.Height - h) / 2;
+        // Zoom anclado arriba: el borde superior del nivel y el HUD no se cortan.
+        int y = b.Y;
         gameRect = new Rectangle(x, y, w, h);
         return gameRect;
     }
