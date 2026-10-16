@@ -75,3 +75,9 @@
 - `AppMain._amDrawInLayer`: `BeginHudPass(!command.hud)` manda los comandos de pausa/resultados a `uiTarget`
   y los del HUD a `hudTarget`.
 - Pendiente: confirmar en el dispositivo que el zoom del nivel coincide con el video; `STAGE_ZOOM` es el valor a ajustar.
+
+## Escenario: la cámara usa el ancho real de render
+- `AppMain.GmCamHalfWidth()` = `Sonic4Ep1.RENDER_W / 2`. Los límites de la cámara (`GmCameraPosSet` y el seguimiento de cámara)
+  usaban `GSD_DISP_WIDTH / 2` (240 px), así que en ultrawide la cámara no podía llegar a los bordes del mapa y quedaban franjas vacías.
+- En pantallas de 480 px el valor es igual al anterior; solo cambia en ultrawide.
+- Pendiente: probar en el teléfono; si el escenario se ve bien pero aparecen zonas negras en los bordes del mapa, es el límite real del nivel.

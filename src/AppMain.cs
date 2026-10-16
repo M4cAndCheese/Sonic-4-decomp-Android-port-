@@ -66896,6 +66896,13 @@ public class AppMain
 		}
 	}
 
+	// Mitad del ancho visible de la cámara, en unidades de juego. Con pantalla ultrawide es mayor que 240,
+	// así la cámara puede llegar a los bordes del mapa y mostrar el escenario a los lados.
+	public static float GmCamHalfWidth()
+	{
+		return Sonic4Ep1.RENDER_W * 0.5f;
+	}
+
 	public static int GSD_DISP_WIDTH
 	{
 		get
@@ -141268,7 +141275,7 @@ public class AppMain
 	public static void GmCameraPosSet(int pos_x, int pos_y, int pos_z)
 	{
 		OBS_CAMERA oBS_CAMERA = ObjCameraGet(0);
-		float num = (float)(GSD_DISP_WIDTH / 2) * oBS_CAMERA.scale;
+		float num = GmCamHalfWidth() * oBS_CAMERA.scale;
 		float num2 = (float)(GSD_DISP_HEIGHT / 2) * oBS_CAMERA.scale;
 		float num3 = (float)g_gm_main_system.map_fcol.bottom - (float)(GSD_DISP_HEIGHT / 2) * oBS_CAMERA.scale;
 		oBS_CAMERA.pos.x = FXM_FX32_TO_FLOAT(pos_x);
@@ -141541,8 +141548,8 @@ public class AppMain
 		obj_camera.disp_pos.y = obj_camera.pos.y + sNNS_VECTOR2.y;
 		obj_camera.disp_pos.z = obj_camera.pos.z + sNNS_VECTOR2.z;
 		gmCameraLookupCheck(obj_camera);
-		float num2 = (float)g_gm_main_system.map_fcol.left + (float)(GSD_DISP_WIDTH / 2) * obj_camera.scale;
-		float num3 = (float)g_gm_main_system.map_fcol.right - (float)(GSD_DISP_WIDTH / 2) * obj_camera.scale;
+		float num2 = (float)g_gm_main_system.map_fcol.left + GmCamHalfWidth() * obj_camera.scale;
+		float num3 = (float)g_gm_main_system.map_fcol.right - GmCamHalfWidth() * obj_camera.scale;
 		float num4 = (float)g_gm_main_system.map_fcol.top + (float)(GSD_DISP_HEIGHT / 2) * obj_camera.scale;
 		float num5 = (float)g_gm_main_system.map_fcol.bottom - (float)(GSD_DISP_HEIGHT / 2) * obj_camera.scale;
 		if (obj_camera.disp_pos.x < num2)
@@ -141815,8 +141822,8 @@ public class AppMain
 		obj_camera.disp_pos.z = obj_camera.pos.z + nNS_VECTOR2.z;
 		GlobalPool<NNS_VECTOR>.Release(nNS_VECTOR2);
 		gmCameraLookupCheck(obj_camera);
-		float num2 = (float)g_gm_main_system.map_fcol.left + (float)(GSD_DISP_WIDTH / 2) * obj_camera.scale;
-		float num3 = (float)g_gm_main_system.map_fcol.right - (float)(GSD_DISP_WIDTH / 2) * obj_camera.scale;
+		float num2 = (float)g_gm_main_system.map_fcol.left + GmCamHalfWidth() * obj_camera.scale;
+		float num3 = (float)g_gm_main_system.map_fcol.right - GmCamHalfWidth() * obj_camera.scale;
 		float num4 = (float)g_gm_main_system.map_fcol.top + (float)(GSD_DISP_HEIGHT / 2) * obj_camera.scale;
 		float num5 = (float)g_gm_main_system.map_fcol.bottom - (float)(GSD_DISP_HEIGHT / 2) * obj_camera.scale;
 		if (obj_camera.disp_pos.x < num2)

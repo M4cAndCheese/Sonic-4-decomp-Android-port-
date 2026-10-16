@@ -1281,7 +1281,7 @@ public class Sonic4Ep1 : Game
     // Solo afecta a lo que se dibuja del juego; los controles y el toque siguen en el rectángulo base.
     // Zoom solo en niveles: tapa el borde del mapa en ultrawide. El HUD se redibuja sin zoom y los controles no cambian.
     // Zoom del escenario en niveles (se mantiene). HUD, pausa y resultados se dibujan en su capa sin zoom.
-    private const float STAGE_ZOOM = 1.45f;
+    private const float STAGE_ZOOM = 1.4f;
     // Alto de la franja de HUD superior (unidades de juego) que se muestra sin zoom.
     private const float HUD_BAND_UNITS = 88f;
 
@@ -1345,8 +1345,8 @@ public class Sonic4Ep1 : Game
         int w = (int)Math.Round(b.Width * z);
         int h = (int)Math.Round(b.Height * z);
         int x = b.X + (b.Width - w) / 2;
-        // Zoom centrado en vertical, como en el video de referencia: el HUD va en su propia capa, así que no se corta.
-        int y = b.Y + (b.Height - h) / 2;
+        // Zoom anclado arriba: el borde superior del nivel y el HUD no se cortan.
+        int y = b.Y;
         gameRect = new Rectangle(x, y, w, h);
         return gameRect;
     }
