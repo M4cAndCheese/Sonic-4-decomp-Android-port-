@@ -123,8 +123,8 @@ public class Sonic4Ep1 : Game
     // Editor de HUD: tamaño (1 = original) y desplazamiento en píxeles de juego (+ derecha / + abajo).
     private bool hudEditing;
     private float hudScale = HUD_DEFAULT_SCALE;
-    private float hudOffX;
-    private float hudOffY;
+    private float hudOffX = HUD_DEFAULT_OFF_X;
+    private float hudOffY = HUD_DEFAULT_OFF_Y;
     // Signos del desplazamiento: si al mover el HUD va al revés, cambia a -1.
     public const float HUD_X_SIGN = 1f;
     public const float HUD_Y_SIGN = 1f;
@@ -134,7 +134,10 @@ public class Sonic4Ep1 : Game
     private const float HUD_MAX_SCALE = 1.5f;
     private const float HUD_MAX_OFFSET_PX = 200f;
     // Tamaño por defecto del HUD: 70% del original (el original se ve grande en pantalla de celular).
-    private const float HUD_DEFAULT_SCALE = 0.7f;
+    // Posición de referencia tomada de la captura 1146581 (estimada a ojo, ±3 px).
+    private const float HUD_DEFAULT_SCALE = 1f;
+    private const float HUD_DEFAULT_OFF_X = -3f;
+    private const float HUD_DEFAULT_OFF_Y = 0f;
     // Caja editable del HUD (píxeles de juego, a escala 1).
     private const float HUD_BOX_W = 440f;
     private const float HUD_BOX_H = 64f;
@@ -741,8 +744,8 @@ public class Sonic4Ep1 : Game
     private void ResetHudLayout()
     {
         hudScale = HUD_DEFAULT_SCALE;
-        hudOffX = 0f;
-        hudOffY = 0f;
+        hudOffX = HUD_DEFAULT_OFF_X;
+        hudOffY = HUD_DEFAULT_OFF_Y;
     }
 
     private void UpdateTouchFrame()
