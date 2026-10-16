@@ -177,7 +177,7 @@ public class Sonic4Ep1 : Game
 
     // Botón de pausa dibujado por el motor: en 480 px va en x=215..331; con ultrawide se desplaza CenterDX.
     // Zona de pausa centrada en el botón dibujado (centro de la pantalla, arriba).
-    private Rectangle PauseRect { get { return new Rectangle((int)((RENDER_W - 116 * STAGE_ZOOM) / 2f), 0, (int)(116 * STAGE_ZOOM), (int)(60 * STAGE_ZOOM)); } }
+    private Rectangle PauseRect { get { return new Rectangle((RENDER_W - 116) / 2, 0, 116, 60); } }
 
     private static Rectangle ShiftX(Rectangle r, int dx)
     {
@@ -1280,19 +1280,10 @@ public class Sonic4Ep1 : Game
         return new Rectangle(x, y, w, h);
     }
 
-    // HUD, mensajes del nivel y pausa: con el zoom del nivel (1.4) y anclados arriba.
-    // Menús, selección de zona, resultados y pausa usan el área base (sin zoom).
+    // HUD, pausa, resultados y mensajes: tamaño base (sin zoom). Solo los niveles y fases especiales llevan zoom.
     private Rectangle HudDrawRect()
     {
-        Rectangle b = GetBaseRect();
-        bool levelZoom = AppMain.IsLevelZoomNow() && !AppMain.IsBootScreenNow() && !AppMain.IsResultScreenNow()
-            && !AppMain.IsStageSelectNow() && !AppMain.IsPauseMenuNow();
-        if (!levelZoom)
-        {
-            return b;
-        }
-        Rectangle g = GetGameRect();
-        return new Rectangle(g.X, b.Y, g.Width, g.Height);
+        return GetBaseRect();
     }
 
     // Área donde se dibuja el escenario: el base, con zoom centrado en niveles.
