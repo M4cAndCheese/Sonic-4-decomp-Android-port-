@@ -7498,6 +7498,9 @@ public class AppMain
 		// true si el comando se crea durante el dibujo del HUD (se marca al encolar, no al ejecutar).
 		public bool hud = AppMain.amHudEnqueue;
 
+		// true si el comando se crea durante el menú de pausa: se dibuja sin zoom, con la proyección normal.
+		public bool uiLayer = AppMain.amUiEnqueue;
+
 		public AMS_COMMAND_HEADER(AMS_COMMAND_HEADER pHeader)
 		{
 			Assign(pHeader);
@@ -68693,9 +68696,18 @@ public class AppMain
 	private static void gmPauseMain(MTS_TASK_TCB tcb)
 	{
 		GMS_PAUSE_WORK gMS_PAUSE_WORK = (GMS_PAUSE_WORK)tcb.work;
-		if (gMS_PAUSE_WORK.proc_update != null)
+		bool prevUi = amUiEnqueue;
+		amUiEnqueue = true;
+		try
 		{
-			gMS_PAUSE_WORK.proc_update(gMS_PAUSE_WORK);
+			if (gMS_PAUSE_WORK.proc_update != null)
+			{
+				gMS_PAUSE_WORK.proc_update(gMS_PAUSE_WORK);
+			}
+		}
+		finally
+		{
+			amUiEnqueue = prevUi;
 		}
 		if ((gMS_PAUSE_WORK.flag & 1) != 0)
 		{
@@ -76200,6 +76212,11 @@ public class AppMain
 
 	private static void _amDrawPrimitive2D(AMS_COMMAND_HEADER command, uint drawflag)
 	{
+		_amDrawInLayer(command, drawflag, _amDrawPrimitive2DCore);
+	}
+
+	private static void _amDrawPrimitive2DCore(AMS_COMMAND_HEADER command, uint drawflag)
+	{
 		AMS_PARAM_DRAW_PRIMITIVE aMS_PARAM_DRAW_PRIMITIVE = (AMS_PARAM_DRAW_PRIMITIVE)command.param;
 		if (aMS_PARAM_DRAW_PRIMITIVE.texlist != null)
 		{
@@ -76307,7 +76324,32 @@ public class AppMain
 		nnEndDrawPrimitive3D();
 	}
 
+	// Las piezas del HUD y del menú de pausa se dibujan en su capa (sin zoom del nivel).
+	private static void _amDrawInLayer(AMS_COMMAND_HEADER command, uint drawflag, _am_draw_command_delegate draw)
+	{
+		Sonic4Ep1 inst = Sonic4Ep1.pInstance;
+		if (!(command.hud || command.uiLayer) || inst == null || !Sonic4Ep1.HUD_LAYER_ENABLED)
+		{
+			draw(command, drawflag);
+			return;
+		}
+		inst.BeginHudPass();
+		try
+		{
+			draw(command, drawflag);
+		}
+		finally
+		{
+			inst.EndHudPass();
+		}
+	}
+
 	private static void _amDrawSortPrimitive2D(AMS_COMMAND_HEADER command, uint drawflag)
+	{
+		_amDrawInLayer(command, drawflag, _amDrawSortPrimitive2DCore);
+	}
+
+	private static void _amDrawSortPrimitive2DCore(AMS_COMMAND_HEADER command, uint drawflag)
 	{
 		AMS_PARAM_DRAW_PRIMITIVE aMS_PARAM_DRAW_PRIMITIVE = (AMS_PARAM_DRAW_PRIMITIVE)command.param;
 		NNS_MATRIX amDrawSortPrimitive2D_mtx = _amDrawSortPrimitive2D_mtx;
@@ -169254,6 +169296,8 @@ public class AppMain
 	// Con RENDER_W = 480 la ampliación es 0 y queda igual que antes.
 	// true mientras se ENCOLAN las piezas del HUD (al crear el comando).
 	public static bool amHudEnqueue;
+	// true mientras se encolan piezas del menú de pausa (capa sin zoom, sin el ajuste del editor de HUD).
+	public static bool amUiEnqueue;
 	// true mientras se EJECUTA un comando de HUD: la proyección usa el tamaño y la posición del editor.
 	private static bool hudProjActive;
 
@@ -180755,6 +180799,23 @@ public class AppMain
 			return gm_clrdm_mgr_p != null && gm_clrdm_mgr_p.tcb != null;
 		}
 		catch (Exception)
+		{
+			return false;
+		}
+	}
+
+	// Igual que IsStageTouchActive pero sin contar la pausa: el zoom del nivel se mantiene al pausar y en el menú.
+	public static bool IsLevelZoomNow()
+	{
+		try
+		{
+			if (GSM_MAIN_STAGE_IS_SPSTAGE())
+			{
+				return true;
+			}
+			return (g_gs_main_sys_info.game_mode == 0 || g_gs_main_sys_info.game_mode == 1) && g_gm_main_system.ply_work[0] != null;
+		}
+		catch
 		{
 			return false;
 		}

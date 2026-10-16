@@ -61,7 +61,7 @@ public class Sonic4Ep1 : Game
     // Capa del HUD: se dibuja sin zoom encima del escenario.
     private RenderTarget2D hudTarget;
     // Interruptor para aislar problemas: false devuelve el HUD al escenario con zoom.
-    public const bool HUD_LAYER_ENABLED = false;
+    public const bool HUD_LAYER_ENABLED = true;
     // Interruptor: false usa el fondo de carga anterior (desenfocado) en vez de negro.
     public const bool LOADING_BLACK_BASE = false;
     private RenderTargetBinding[] hudPrevTargets;
@@ -1260,7 +1260,8 @@ public class Sonic4Ep1 : Game
 
     // Valores del editor de HUD que usa AppMain.AmMakeOrtho2D (unidades de ortho: 2.25 por píxel de juego).
     public float HudUserScale { get { return hudScale; } }
-    public float HudZoomNow { get { return (AppMain.IsStageTouchActive() && !AppMain.IsBootScreenNow() && !AppMain.IsResultScreenNow()) ? STAGE_ZOOM : 1f; } }
+    // Con la capa del HUD activa, el HUD se dibuja sin zoom (zoom 1); la proyección ya no lo compensa.
+    public float HudZoomNow { get { return HUD_LAYER_ENABLED ? 1f : ((AppMain.IsLevelZoomNow() && !AppMain.IsBootScreenNow() && !AppMain.IsResultScreenNow()) ? STAGE_ZOOM : 1f); } }
     public float HudOffsetUnitsX { get { return hudOffX * 2.25f * HUD_X_SIGN; } }
     public float HudOffsetUnitsY { get { return hudOffY * 2.25f * HUD_Y_SIGN; } }
 
@@ -1281,7 +1282,7 @@ public class Sonic4Ep1 : Game
     {
         Rectangle b = GetBaseRect();
         // Sin zoom en pantallas de arranque y carga: ahí el contenido se extiende a los laterales sin estirarse.
-        float z = (AppMain.IsStageTouchActive() && !AppMain.IsBootScreenNow() && !AppMain.IsResultScreenNow()) ? STAGE_ZOOM : 1f;
+        float z = (AppMain.IsLevelZoomNow() && !AppMain.IsBootScreenNow() && !AppMain.IsResultScreenNow()) ? STAGE_ZOOM : 1f;
         int w = (int)Math.Round(b.Width * z);
         int h = (int)Math.Round(b.Height * z);
         int x = b.X + (b.Width - w) / 2;
