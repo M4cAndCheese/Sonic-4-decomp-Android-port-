@@ -67,7 +67,7 @@
 
 
 ## Capas separadas: HUD, pausa/resultados y zoom del nivel
-- `Sonic4Ep1.STAGE_ZOOM` (1.4): solo escala el escenario del nivel. Sin cambios.
+- `Sonic4Ep1.STAGE_ZOOM` pasa de 1.4 a 1.0: el nivel se ve sin acercar, como en la captura (antes se veía demasiado grande).
 - `Sonic4Ep1.HUD_ZOOM` pasa de 0.75 a 1.0: el HUD se ve a tamaño de la captura.
 - Nuevo `Sonic4Ep1.UI_ZOOM` (0.75): escala propia de la pausa, la pantalla de resultados y los menús.
   Están en su propia textura (`uiTarget`), así que cambiar una escala no afecta a la otra.
