@@ -122,9 +122,9 @@ public class Sonic4Ep1 : Game
     private bool editing;
     // Editor de HUD: tamaño (1 = original) y desplazamiento en píxeles de juego (+ derecha / + abajo).
     private bool hudEditing;
-    private float hudScale = 1f;
-    private float hudOffX;
-    private float hudOffY;
+    private float hudScale = HUD_DEFAULT_SCALE;
+    private float hudOffX = HUD_DEFAULT_OFF_X;
+    private float hudOffY = HUD_DEFAULT_OFF_Y;
     // Signos del desplazamiento: si al mover el HUD va al revés, cambia a -1.
     public const float HUD_X_SIGN = 1f;
     public const float HUD_Y_SIGN = 1f;
@@ -133,6 +133,21 @@ public class Sonic4Ep1 : Game
     private const float HUD_MIN_SCALE = 0.5f;
     private const float HUD_MAX_SCALE = 1.5f;
     private const float HUD_MAX_OFFSET_PX = 200f;
+    // Tamaño por defecto del HUD: 70% del original (el original se ve grande en pantalla de celular).
+    // Posición de referencia tomada de la captura 1146581 (estimada a ojo, ±3 px).
+    private const float HUD_DEFAULT_SCALE = 1f;
+    private const float HUD_DEFAULT_OFF_X = -3f;
+    private const float HUD_DEFAULT_OFF_Y = 0f;
+    // Caja editable del HUD (píxeles de juego, a escala 1).
+    private const float HUD_BOX_W = 440f;
+    private const float HUD_BOX_H = 64f;
+    private int hudDragId = -1;
+    private int hudDragMode = -1;   // 0 mover, 1 escalar (esquina)
+    private Vector2 hudDragLast;
+    private float hudDragStartScale = 1f;
+    private float hudDragStartDist = 1f;
+    private static readonly Rectangle HudEditDoneBase = new Rectangle(190, 280, 100, 28);
+    private static readonly Rectangle HudEditResetBase = new Rectangle(70, 280, 100, 28);
     private bool wideView = true;
     private int dragId = -1;
     private int dragKind = -1; // 0 mover joystick, 1 mover salto, 2 redimensionar joystick, 3 redimensionar salto
@@ -726,9 +741,9 @@ public class Sonic4Ep1 : Game
 
     private void ResetHudLayout()
     {
-        hudScale = 1f;
-        hudOffX = 0f;
-        hudOffY = 0f;
+        hudScale = HUD_DEFAULT_SCALE;
+        hudOffX = HUD_DEFAULT_OFF_X;
+        hudOffY = HUD_DEFAULT_OFF_Y;
     }
 
     private void UpdateTouchFrame()
@@ -832,7 +847,7 @@ public class Sonic4Ep1 : Game
         }
         else if (hudEditing)
         {
-            HandleHudEdit(newTouches);
+            HandleHudEdit(touches, newTouches);
             DrawHudEdit();
         }
         else if (editing)
@@ -1047,66 +1062,104 @@ public class Sonic4Ep1 : Game
         stickPos = stickCenter;
     }
 
-    // Editor de HUD: toques en el panel. Los cambios se guardan al momento.
-    private void HandleHudEdit(List<TouchLocation> newTouches)
+    // Caja del HUD en coordenadas del juego: se mueve arrastrándola y la esquina inferior la escala.
+    private Vector2 HudCenter()
     {
-        bool changed = false;
-        foreach (TouchLocation t in newTouches)
+        return new Vector2(CenterDX + 240f + hudOffX, 32f + hudOffY);
+    }
+
+    private Rectangle HudBoxRect
+    {
+        get
         {
-            if (InRect(t.Position, HudPlusRect))
+            Vector2 c = HudCenter();
+            float w = HUD_BOX_W * hudScale;
+            float h = HUD_BOX_H * hudScale;
+            return new Rectangle((int)Math.Round(c.X - w / 2f), (int)Math.Round(c.Y - h / 2f), (int)Math.Round(w), (int)Math.Round(h));
+        }
+    }
+
+    private static Rectangle HudHandleRect(Rectangle box)
+    {
+        return new Rectangle(box.Right - 14, box.Bottom - 14, 18, 18);
+    }
+
+    private Rectangle HudEditDoneRect { get { return ShiftX(HudEditDoneBase, CenterDX); } }
+    private Rectangle HudEditResetRect { get { return ShiftX(HudEditResetBase, CenterDX); } }
+
+    // Editor de HUD: arrastrar la caja mueve el HUD; arrastrar la esquina cambia el tamaño. Se guarda al soltar.
+    private void HandleHudEdit(TouchCollection touches, List<TouchLocation> newTouches)
+    {
+        bool save = false;
+        if (hudDragId == -1)
+        {
+            foreach (TouchLocation t in newTouches)
             {
-                hudScale = (float)Math.Round(Clamp(hudScale + HUD_SCALE_STEP, HUD_MIN_SCALE, HUD_MAX_SCALE), 2);
-                changed = true;
-            }
-            else if (InRect(t.Position, HudMinusRect))
-            {
-                hudScale = (float)Math.Round(Clamp(hudScale - HUD_SCALE_STEP, HUD_MIN_SCALE, HUD_MAX_SCALE), 2);
-                changed = true;
-            }
-            else if (InRect(t.Position, HudUpRect))
-            {
-                hudOffY = Clamp(hudOffY - HUD_STEP_PX, -HUD_MAX_OFFSET_PX, HUD_MAX_OFFSET_PX);
-                changed = true;
-            }
-            else if (InRect(t.Position, HudDownRect))
-            {
-                hudOffY = Clamp(hudOffY + HUD_STEP_PX, -HUD_MAX_OFFSET_PX, HUD_MAX_OFFSET_PX);
-                changed = true;
-            }
-            else if (InRect(t.Position, HudLeftRect))
-            {
-                hudOffX = Clamp(hudOffX - HUD_STEP_PX, -HUD_MAX_OFFSET_PX, HUD_MAX_OFFSET_PX);
-                changed = true;
-            }
-            else if (InRect(t.Position, HudRightRect))
-            {
-                hudOffX = Clamp(hudOffX + HUD_STEP_PX, -HUD_MAX_OFFSET_PX, HUD_MAX_OFFSET_PX);
-                changed = true;
-            }
-            else if (InRect(t.Position, HudExportRect))
-            {
-                SaveLayoutTo(HudExportPath);
-            }
-            else if (InRect(t.Position, HudImportRect))
-            {
-                if (File.Exists(HudExportPath))
+                if (InRect(t.Position, HudEditDoneRect))
                 {
-                    LoadLayoutFrom(HudExportPath);
-                    changed = true;
+                    hudEditing = false;
+                    SaveLayout();
+                    return;
+                }
+                if (InRect(t.Position, HudEditResetRect))
+                {
+                    ResetHudLayout();
+                    save = true;
+                    break;
+                }
+                Rectangle box = HudBoxRect;
+                if (InRect(t.Position, HudHandleRect(box)))
+                {
+                    hudDragId = t.Id;
+                    hudDragMode = 1;
+                    hudDragLast = t.Position;
+                    hudDragStartScale = hudScale;
+                    hudDragStartDist = Math.Max(1f, Vector2.Distance(t.Position, HudCenter()));
+                    break;
+                }
+                if (InRect(t.Position, box))
+                {
+                    hudDragId = t.Id;
+                    hudDragMode = 0;
+                    hudDragLast = t.Position;
+                    break;
                 }
             }
-            else if (InRect(t.Position, HudResetRect))
-            {
-                ResetHudLayout();
-                changed = true;
-            }
-            else if (InRect(t.Position, HudDoneRect))
-            {
-                hudEditing = false;
-                changed = true;
-            }
         }
-        if (changed)
+
+        bool found = false;
+        foreach (TouchLocation t in touches)
+        {
+            if (hudDragId == -1 || t.Id != hudDragId)
+            {
+                continue;
+            }
+            found = true;
+            if (t.State == TouchLocationState.Released || t.State == TouchLocationState.Invalid)
+            {
+                hudDragId = -1;
+                save = true;
+                continue;
+            }
+            if (hudDragMode == 0)
+            {
+                Vector2 d = t.Position - hudDragLast;
+                hudOffX = Clamp(hudOffX + d.X, -HUD_MAX_OFFSET_PX, HUD_MAX_OFFSET_PX);
+                hudOffY = Clamp(hudOffY + d.Y, -HUD_MAX_OFFSET_PX, HUD_MAX_OFFSET_PX);
+            }
+            else
+            {
+                float dist = Vector2.Distance(t.Position, HudCenter());
+                hudScale = (float)Math.Round(Clamp(hudDragStartScale * dist / hudDragStartDist, HUD_MIN_SCALE, HUD_MAX_SCALE), 2);
+            }
+            hudDragLast = t.Position;
+        }
+        if (hudDragId != -1 && !found)
+        {
+            hudDragId = -1;
+            save = true;
+        }
+        if (save)
         {
             SaveLayout();
         }
@@ -1114,21 +1167,16 @@ public class Sonic4Ep1 : Game
 
     private void DrawHudEdit()
     {
-        spriteBatch.Draw(pixelTex, HudPanel, new Color(16, 20, 18, 235));
-        DrawButton(HudPlusRect, "Tam +");
-        DrawButton(HudMinusRect, "Tam -");
-        DrawButton(HudUpRect, "Arriba");
-        DrawButton(HudLeftRect, "Izq");
-        DrawButton(HudRightRect, "Der");
-        DrawButton(HudDownRect, "Abajo");
-        DrawButton(HudExportRect, "Exportar");
-        DrawButton(HudImportRect, "Importar");
-        DrawButton(HudResetRect, "Restab.");
-        DrawButton(HudDoneRect, "Listo");
+        Rectangle box = HudBoxRect;
+        spriteBatch.Draw(pixelTex, box, new Color(255, 255, 255, 36));
+        DrawFrame(box);
+        spriteBatch.Draw(pixelTex, HudHandleRect(box), new Color(191, 232, 138, 235));
+        DrawButton(HudEditResetRect, "Restab.");
+        DrawButton(HudEditDoneRect, "Listo");
         if (fntKootenay != null)
         {
-            string info = "HUD " + Math.Round(hudScale * 100f) + "%  X " + F(hudOffX) + "  Y " + F(hudOffY);
-            spriteBatch.DrawString(fntKootenay, info, new Vector2(HudPanel.X + 6, HudPanel.Bottom + 4), Color.White, 0f, Vector2.Zero, 0.5f, SpriteEffects.None, 0f);
+            string info = "Arrastra el HUD  |  esquina: tamano  |  " + Math.Round(hudScale * 100f) + "%";
+            spriteBatch.DrawString(fntKootenay, info, new Vector2(CenterDX + 8, 258), Color.White, 0f, Vector2.Zero, 0.5f, SpriteEffects.None, 0f);
         }
     }
 
