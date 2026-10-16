@@ -538,19 +538,6 @@ public class Sonic4Ep1 : Game
             // AlphaBlend: las zonas sin nivel son transparentes y dejan ver el fondo de los laterales.
             SamplerState gameSampler = (softFilter || !IsIntegerScale()) ? SamplerState.LinearClamp : SamplerState.PointClamp;
             Texture2D gameTex = softFilter && softTarget != null ? (Texture2D)softTarget : gameTarget;
-            // Sin shader: el borde izquierdo y derecho del nivel se repite hacia los lados, detrás del nivel.
-            // Donde el nivel no tiene escenario (transparente) se ve el borde repetido en vez del fondo borroso.
-            if (!boot && RENDER_W > GAME_W && gameTarget != null)
-            {
-                Rectangle gr = GetGameRect();
-                int half = gr.Width / 2;
-                Rectangle leftSrc = new Rectangle(1, 0, 1, gameTarget.Height);
-                Rectangle rightSrc = new Rectangle(gameTarget.Width - 2, 0, 1, gameTarget.Height);
-                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, null, null);
-                spriteBatch.Draw(gameTarget, new Rectangle(gr.X, gr.Y, half, gr.Height), leftSrc, Color.White);
-                spriteBatch.Draw(gameTarget, new Rectangle(gr.X + half, gr.Y, gr.Width - half, gr.Height), rightSrc, Color.White);
-                spriteBatch.End();
-            }
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, gameSampler, null, null);
             spriteBatch.Draw(gameTex, GetGameRect(), Color.White);
             spriteBatch.End();

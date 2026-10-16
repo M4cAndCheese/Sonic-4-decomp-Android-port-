@@ -88,10 +88,6 @@
   (transparentes) se copiaban como negro y se veían como barras.
 - Se mantiene `AppMain.GmCamHalfWidth()`: la cámara llega a los bordes del mapa con el ancho real de pantalla.
 
-## Bordes del nivel repetidos hacia los lados (sin shader)
-- `Sonic4Ep1.Draw`: antes de dibujar el nivel, se dibuja la columna izquierda del nivel estirada en la mitad izquierda y la derecha en la mitad derecha, detrás del nivel.
-- Solo se ve donde el nivel está vacío (transparente). Si el mapa no tiene escenario más allá de sus bordes, se ve el borde repetido, no escenario nuevo.
-
 ## Ventana de objetos y terreno en ultrawide
 - `AppMain.ObjInit`: `clip_lcd_size[0]` usa el ancho real de render (`RENDER_W`) si es mayor que 480. La ventana de
   recorte (`ObjViewOutCheck`) y la creación de eventos de terreno y objetos (`GmEveMgrCreateEventLcd`) usaban solo 480 px,
