@@ -7495,6 +7495,9 @@ public class AppMain
 
 		public object param;
 
+		// true si el comando se crea durante el dibujo del HUD (se marca al encolar, no al ejecutar).
+		public bool hud = AppMain.amHudEnqueue;
+
 		public AMS_COMMAND_HEADER(AMS_COMMAND_HEADER pHeader)
 		{
 			Assign(pHeader);
@@ -7509,6 +7512,7 @@ public class AppMain
 			state = pHeader.state;
 			command_id = pHeader.command_id;
 			param = pHeader.param;
+			hud = pHeader.hud;
 		}
 	}
 
@@ -76307,6 +76311,7 @@ public class AppMain
 	{
 		AMS_PARAM_DRAW_PRIMITIVE aMS_PARAM_DRAW_PRIMITIVE = (AMS_PARAM_DRAW_PRIMITIVE)command.param;
 		NNS_MATRIX amDrawSortPrimitive2D_mtx = _amDrawSortPrimitive2D_mtx;
+		hudProjActive = command.hud;
 		AmMakeOrtho2D(amDrawSortPrimitive2D_mtx);
 		amDrawSetProjection(amDrawSortPrimitive2D_mtx, 1);
 		if (aMS_PARAM_DRAW_PRIMITIVE.texlist != null && aMS_PARAM_DRAW_PRIMITIVE.texId != -1)
@@ -97691,8 +97696,8 @@ public class AppMain
 			{
 				// El HUD se dibuja en su propia capa, sin el zoom del escenario.
 				// El HUD usa la proyección del editor (tamaño y posición). Si el dibujo falla, se restaura el estado.
-				bool prevHud = hudProjActive;
-				hudProjActive = true;
+				bool prevHud = amHudEnqueue;
+				amHudEnqueue = true;
 				try
 				{
 					ObjDrawActionSummary(obj_work);
@@ -97702,7 +97707,7 @@ public class AppMain
 				}
 				finally
 				{
-					hudProjActive = prevHud;
+					amHudEnqueue = prevHud;
 				}
 			}
 		}
@@ -169247,7 +169252,9 @@ public class AppMain
 	// Ortho 2D: el eje de 1080 es el ancho de la pantalla. Se amplía de forma simétrica
 	// para que el 2D no se estire en ultrawide: píxeles cuadrados y fondos que se extienden a los lados.
 	// Con RENDER_W = 480 la ampliación es 0 y queda igual que antes.
-	// true mientras se dibuja el HUD: la proyección usa el tamaño y la posición del editor de HUD.
+	// true mientras se ENCOLAN las piezas del HUD (al crear el comando).
+	public static bool amHudEnqueue;
+	// true mientras se EJECUTA un comando de HUD: la proyección usa el tamaño y la posición del editor.
 	private static bool hudProjActive;
 
 	private static void AmMakeOrtho2D(NNS_MATRIX mtx)
@@ -169277,6 +169284,7 @@ public class AppMain
 	{
 		NNS_MATRIX aoActDrawPre_mtx = AoActDrawPre_mtx;
 		aoActDrawPre_mtx.Clear();
+		hudProjActive = false;
 		AmMakeOrtho2D(aoActDrawPre_mtx);
 		amDrawSetProjection(aoActDrawPre_mtx, 1);
 		nnMakeUnitMatrix(aoActDrawPre_mtx);
