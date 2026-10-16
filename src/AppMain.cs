@@ -65781,9 +65781,6 @@ public class AppMain
 	private static float[] nnCosTable;
 
 	public static SpriteBatch m_spriteBatch;
-	// Capa del HUD (marcador fijo) separada del escenario: se dibuja sin zoom encima del juego.
-	public static RenderTarget2D hud_layer_target;
-	public static RenderTarget2D game_layer_target;
 
 	private static bool _am_iPhone_quit_req;
 
@@ -97692,27 +97689,17 @@ public class AppMain
 			GMS_FIX_MGR_WORK gMS_FIX_MGR_WORK = (GMS_FIX_MGR_WORK)gm_fix_tcb.work;
 			if ((gMS_FIX_MGR_WORK.flag & 2) == 0)
 			{
-				GmFixHudRouteBegin();
+				// El HUD se dibuja en su propia capa, sin el zoom del escenario.
+				if (Sonic4Ep1.pInstance != null)
+				{
+					Sonic4Ep1.pInstance.BeginHudPass();
+				}
 				ObjDrawActionSummary(obj_work);
-				GmFixHudRouteEnd();
+				if (Sonic4Ep1.pInstance != null)
+				{
+					Sonic4Ep1.pInstance.EndHudPass();
+				}
 			}
-		}
-	}
-
-	// Las piezas del HUD se dibujan en su propia capa, para poder moverlas o escalarlas sin tocar el escenario.
-	private static void GmFixHudRouteBegin()
-	{
-		if (hud_layer_target != null && game_layer_target != null)
-		{
-			hud_layer_target.GraphicsDevice.SetRenderTarget(hud_layer_target);
-		}
-	}
-
-	private static void GmFixHudRouteEnd()
-	{
-		if (hud_layer_target != null && game_layer_target != null)
-		{
-			hud_layer_target.GraphicsDevice.SetRenderTarget(game_layer_target);
 		}
 	}
 
@@ -180718,6 +180705,25 @@ public class AppMain
 				return true;
 			}
 			return evt == (short)GSE_EVT_ID.GSD_EVT_ID_SYS_INIT || evt == (short)GSE_EVT_ID.GSD_EVT_ID_LOGO_SEGA || evt == (short)GSE_EVT_ID.GSD_EVT_ID_LOGO_SONIC;
+		}
+		catch (Exception)
+		{
+			return false;
+		}
+	}
+
+	// true mientras la pantalla de carga (LOADING_MAIN) está visible.
+	public static bool IsLoadingScreenNow()
+	{
+		return dm_loading_active;
+	}
+
+	// true mientras se ven los resultados de la fase (CLRDM): sin zoom del escenario.
+	public static bool IsResultScreenNow()
+	{
+		try
+		{
+			return gm_clrdm_mgr_p != null && gm_clrdm_mgr_p.tcb != null;
 		}
 		catch (Exception)
 		{
