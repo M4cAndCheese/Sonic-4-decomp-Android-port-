@@ -7499,7 +7499,8 @@ public class AppMain
 		public bool hud = AppMain.amHudEnqueue;
 
 		// true si el comando se crea durante el menú de pausa: se dibuja sin zoom, con la proyección normal.
-		public bool uiLayer = AppMain.amUiEnqueue;
+		// Pantalla de resultados: también sin zoom (capa de UI), igual que la captura de referencia.
+		public bool uiLayer = AppMain.amUiEnqueue || AppMain.IsResultScreenNow();
 
 		public AMS_COMMAND_HEADER(AMS_COMMAND_HEADER pHeader)
 		{
@@ -154122,6 +154123,7 @@ public class AppMain
 
 	private void dmStgSlctProcMain(MTS_TASK_TCB tcb)
 	{
+		dmStgSlctLastTick = System.Environment.TickCount;
 		DMS_STGSLCT_MAIN_WORK dMS_STGSLCT_MAIN_WORK = (DMS_STGSLCT_MAIN_WORK)tcb.work;
 		if ((dMS_STGSLCT_MAIN_WORK.flag & 1) != 0)
 		{
@@ -180792,6 +180794,19 @@ public class AppMain
 	}
 
 	// true mientras se ven los resultados de la fase (CLRDM): sin zoom del escenario.
+	// Selección de zona: la tarea de selección refresca este instante en cada fotograma.
+	private static int dmStgSlctLastTick = int.MinValue;
+	public static bool IsStageSelectNow()
+	{
+		return unchecked(System.Environment.TickCount - dmStgSlctLastTick) < 150;
+	}
+
+	// Menú de pausa abierto.
+	public static bool IsPauseMenuNow()
+	{
+		return gm_pause_tcb != null;
+	}
+
 	public static bool IsResultScreenNow()
 	{
 		try

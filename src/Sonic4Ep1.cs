@@ -176,7 +176,8 @@ public class Sonic4Ep1 : Game
     private static readonly Rectangle HudDoneBase = new Rectangle(244, 224, 76, 26);
 
     // Botón de pausa dibujado por el motor: en 480 px va en x=215..331; con ultrawide se desplaza CenterDX.
-    private Rectangle PauseRect { get { return new Rectangle(CenterDX + 215, 0, 116, 60); } }
+    // Zona de pausa centrada en el botón dibujado (centro de la pantalla, arriba).
+    private Rectangle PauseRect { get { return new Rectangle((int)((RENDER_W - 116 * STAGE_ZOOM) / 2f), 0, (int)(116 * STAGE_ZOOM), (int)(60 * STAGE_ZOOM)); } }
 
     private static Rectangle ShiftX(Rectangle r, int dx)
     {
@@ -534,7 +535,7 @@ public class Sonic4Ep1 : Game
             if (!boot && HUD_LAYER_ENABLED && hudTarget != null)
             {
                 spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, gameSampler, null, null);
-                spriteBatch.Draw(hudTarget, GetBaseRect(), Color.White);
+                spriteBatch.Draw(hudTarget, HudDrawRect(), Color.White);
                 spriteBatch.End();
             }
             // En fases especiales no hay controles en pantalla: se juega moviendo el celular.
@@ -1254,6 +1255,7 @@ public class Sonic4Ep1 : Game
     // Zoom del escenario en niveles: oculta los bordes que el nivel no cubre en ultrawide.
     // Solo afecta a lo que se dibuja del juego; los controles y el toque siguen en el rectángulo base.
     // Zoom solo en niveles: tapa el borde del mapa en ultrawide. El HUD se redibuja sin zoom y los controles no cambian.
+    // Zoom del escenario en niveles (se mantiene). HUD, pausa y resultados se dibujan en su capa sin zoom.
     private const float STAGE_ZOOM = 1.4f;
     // Alto de la franja de HUD superior (unidades de juego) que se muestra sin zoom.
     private const float HUD_BAND_UNITS = 88f;
@@ -1278,12 +1280,27 @@ public class Sonic4Ep1 : Game
         return new Rectangle(x, y, w, h);
     }
 
+    // HUD, mensajes del nivel y pausa: con el zoom del nivel (1.4) y anclados arriba.
+    // Menús, selección de zona, resultados y pausa usan el área base (sin zoom).
+    private Rectangle HudDrawRect()
+    {
+        Rectangle b = GetBaseRect();
+        bool levelZoom = AppMain.IsLevelZoomNow() && !AppMain.IsBootScreenNow() && !AppMain.IsResultScreenNow()
+            && !AppMain.IsStageSelectNow() && !AppMain.IsPauseMenuNow();
+        if (!levelZoom)
+        {
+            return b;
+        }
+        Rectangle g = GetGameRect();
+        return new Rectangle(g.X, b.Y, g.Width, g.Height);
+    }
+
     // Área donde se dibuja el escenario: el base, con zoom centrado en niveles.
     public Rectangle GetGameRect()
     {
         Rectangle b = GetBaseRect();
         // Sin zoom en pantallas de arranque y carga: ahí el contenido se extiende a los laterales sin estirarse.
-        float z = (AppMain.IsLevelZoomNow() && !AppMain.IsBootScreenNow() && !AppMain.IsResultScreenNow()) ? STAGE_ZOOM : 1f;
+        float z = (AppMain.IsLevelZoomNow() && !AppMain.IsBootScreenNow() && !AppMain.IsResultScreenNow() && !AppMain.IsStageSelectNow()) ? STAGE_ZOOM : 1f;
         int w = (int)Math.Round(b.Width * z);
         int h = (int)Math.Round(b.Height * z);
         int x = b.X + (b.Width - w) / 2;
