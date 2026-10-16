@@ -60,6 +60,8 @@ public class Sonic4Ep1 : Game
     private RenderTarget2D gameTarget;
     // Capa del HUD: se dibuja sin zoom encima del escenario.
     private RenderTarget2D hudTarget;
+    // Capa de UI (pausa, resultados, menús): escala propia (UI_ZOOM), separada del HUD.
+    private RenderTarget2D uiTarget;
     // Interruptor para aislar problemas: false devuelve el HUD al escenario con zoom.
     public const bool HUD_LAYER_ENABLED = true;
     // Interruptor: false usa el fondo de carga anterior (desenfocado) en vez de negro.
@@ -289,6 +291,7 @@ public class Sonic4Ep1 : Game
         RENDER_SCALE = 3;
         gameTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W * RENDER_SCALE, GAME_H * RENDER_SCALE, false, SurfaceFormat.Color, DepthFormat.Depth24);
         hudTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W * RENDER_SCALE, GAME_H * RENDER_SCALE, false, SurfaceFormat.Color, DepthFormat.None);
+        uiTarget = new RenderTarget2D(base.GraphicsDevice, RENDER_W * RENDER_SCALE, GAME_H * RENDER_SCALE, false, SurfaceFormat.Color, DepthFormat.None);
         AppMain.pauseKeyX = (uint)PauseRect.X;
         // Versión mínima del frame para hacer el fondo difuminado de los laterales.
         blurTarget = new RenderTarget2D(base.GraphicsDevice, 32, 18, false, SurfaceFormat.Color, DepthFormat.None);
@@ -457,6 +460,11 @@ public class Sonic4Ep1 : Game
             GraphicsDevice.SetRenderTarget(hudTarget);
             GraphicsDevice.Clear(Color.Transparent);
         }
+        if (uiTarget != null)
+        {
+            GraphicsDevice.SetRenderTarget(uiTarget);
+            GraphicsDevice.Clear(Color.Transparent);
+        }
         if (gameTarget != null)
         {
             GraphicsDevice.SetRenderTarget(gameTarget);
@@ -536,6 +544,13 @@ public class Sonic4Ep1 : Game
             {
                 spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, gameSampler, null, null);
                 spriteBatch.Draw(hudTarget, HudDrawRect(), Color.White);
+                spriteBatch.End();
+            }
+            // Pausa, resultados y menús: capa propia, escalada con UI_ZOOM (no depende del HUD ni del nivel).
+            if (!boot && HUD_LAYER_ENABLED && uiTarget != null)
+            {
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, gameSampler, null, null);
+                spriteBatch.Draw(uiTarget, UiDrawRect(), Color.White);
                 spriteBatch.End();
             }
             // Diagnóstico: marco del HUD y del escenario para ver qué parte queda cortada.
@@ -1205,20 +1220,22 @@ public class Sonic4Ep1 : Game
     }
 
     // Las piezas del HUD se dibujan en hudTarget mientras estén entre Begin y End.
-    public void BeginHudPass()
+    // ui = true: las piezas van a la capa de UI (pausa, resultados); false: a la capa del HUD.
+    public void BeginHudPass(bool ui = false)
     {
-        if (!HUD_LAYER_ENABLED || hudTarget == null || GraphicsDevice == null)
+        RenderTarget2D target = ui ? uiTarget : hudTarget;
+        if (!HUD_LAYER_ENABLED || target == null || GraphicsDevice == null)
         {
             return;
         }
         hudPrevTargets = GraphicsDevice.GetRenderTargets();
         hudPrevViewport = GraphicsDevice.Viewport;
-        GraphicsDevice.SetRenderTarget(hudTarget);
+        GraphicsDevice.SetRenderTarget(target);
     }
 
     public void EndHudPass()
     {
-        if (!HUD_LAYER_ENABLED || hudTarget == null || GraphicsDevice == null)
+        if (!HUD_LAYER_ENABLED || (hudTarget == null && uiTarget == null) || GraphicsDevice == null)
         {
             return;
         }
@@ -1290,19 +1307,32 @@ public class Sonic4Ep1 : Game
 
     // Zoom propio del HUD (1 = tamaño de la captura). Solo afecta a la capa del HUD, no al nivel.
     // Se ancla arriba y centrado en horizontal.
-    public const float HUD_ZOOM = 0.75f;
+    public const float HUD_ZOOM = 1f;
+    // Zoom propio de pausa, resultados y menús (1 = tamaño base). Bájalo si no caben con el zoom del nivel.
+    public const float UI_ZOOM = 0.75f;
     // Diagnóstico: true dibuja un marco en el área del HUD y en el área del escenario.
     public const bool HUD_DEBUG_FRAMES = false;
     // HUD, pausa y resultados: tamaño base por defecto, con HUD_ZOOM aplicado. El nivel no se toca.
     private Rectangle HudDrawRect()
     {
+        return LayerRect(HUD_ZOOM);
+    }
+
+    // Pausa, resultados y menús: su propio zoom (UI_ZOOM), anclado arriba y centrado.
+    private Rectangle UiDrawRect()
+    {
+        return LayerRect(UI_ZOOM);
+    }
+
+    private Rectangle LayerRect(float zoom)
+    {
         Rectangle b = GetBaseRect();
-        if (HUD_ZOOM == 1f)
+        if (zoom == 1f)
         {
             return b;
         }
-        int w = (int)Math.Round(b.Width * HUD_ZOOM);
-        int h = (int)Math.Round(b.Height * HUD_ZOOM);
+        int w = (int)Math.Round(b.Width * zoom);
+        int h = (int)Math.Round(b.Height * zoom);
         return new Rectangle(b.X + (b.Width - w) / 2, b.Y, w, h);
     }
 

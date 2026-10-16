@@ -64,3 +64,14 @@
 ## Diagnóstico de proporciones (DEBUG_LAYOUT)
 - `Sonic4Ep1.DrawLayoutDebug`: muestra backbuffer, viewport, RENDER_W x GAME_H, escala y aspecto de la cámara.
   Está activo (`DEBUG_LAYOUT = true`). Poner en false para ocultarlo.
+
+
+## Capas separadas: HUD, pausa/resultados y zoom del nivel
+- `Sonic4Ep1.STAGE_ZOOM` (1.4): solo escala el escenario del nivel. Sin cambios.
+- `Sonic4Ep1.HUD_ZOOM` pasa de 0.75 a 1.0: el HUD se ve a tamaño de la captura.
+- Nuevo `Sonic4Ep1.UI_ZOOM` (0.75): escala propia de la pausa, la pantalla de resultados y los menús.
+  Están en su propia textura (`uiTarget`), así que cambiar una escala no afecta a la otra.
+  Si no caben bien con el zoom del nivel, bajar `UI_ZOOM`.
+- `AppMain._amDrawInLayer`: `BeginHudPass(!command.hud)` manda los comandos de pausa/resultados a `uiTarget`
+  y los del HUD a `hudTarget`.
+- Pendiente: confirmar en el dispositivo que el zoom del nivel coincide con el video; `STAGE_ZOOM` es el valor a ajustar.
