@@ -61,9 +61,9 @@ public class Sonic4Ep1 : Game
     // Capa del HUD: se dibuja sin zoom encima del escenario.
     private RenderTarget2D hudTarget;
     // Interruptor para aislar problemas: false devuelve el HUD al escenario con zoom.
-    public const bool HUD_LAYER_ENABLED = true;
+    public const bool HUD_LAYER_ENABLED = false;
     // Interruptor: false usa el fondo de carga anterior (desenfocado) en vez de negro.
-    public const bool LOADING_BLACK_BASE = true;
+    public const bool LOADING_BLACK_BASE = false;
     private RenderTargetBinding[] hudPrevTargets;
     private Viewport hudPrevViewport;
     // Mantiene el fondo de carga unos fotogramas más para que los laterales no parpadeen.
