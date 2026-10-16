@@ -177767,7 +177767,9 @@ public class AppMain
 		g_obj.disp_height = disp_height;
 		g_obj.lcd_size[0] = lcd_size_x;
 		g_obj.lcd_size[1] = lcd_size_y;
-		g_obj.clip_lcd_size[0] = lcd_size_x;
+		// Ventana de recorte horizontal: con pantalla ultrawide se amplía al ancho real de render,
+		// así los objetos y el terreno de los laterales se crean y se dibujan (en 480 px quedan igual).
+		g_obj.clip_lcd_size[0] = (short)Math.Max(lcd_size_x, Sonic4Ep1.RENDER_W);
 		g_obj.clip_lcd_size[1] = lcd_size_y;
 		g_obj.load_drawflag = 0u;
 		g_obj.drawflag = 0u;

@@ -81,3 +81,20 @@
   usaban `GSD_DISP_WIDTH / 2` (240 px), así que en ultrawide la cámara no podía llegar a los bordes del mapa y quedaban franjas vacías.
 - En pantallas de 480 px el valor es igual al anterior; solo cambia en ultrawide.
 - Pendiente: probar en el teléfono; si el escenario se ve bien pero aparecen zonas negras en los bordes del mapa, es el límite real del nivel.
+
+## Sin zoom y sin barras negras (todos los niveles)
+- `Sonic4Ep1.STAGE_ZOOM` = 1.0: sin zoom en ningún nivel, se ve la proporción ultrawide completa.
+- El fondo difuminado de los laterales se genera sobre un fondo gris (90), no sobre negro. Antes, las zonas del nivel sin dibujar
+  (transparentes) se copiaban como negro y se veían como barras.
+- Se mantiene `AppMain.GmCamHalfWidth()`: la cámara llega a los bordes del mapa con el ancho real de pantalla.
+
+## Bordes del nivel repetidos hacia los lados (sin shader)
+- `Sonic4Ep1.Draw`: antes de dibujar el nivel, se dibuja la columna izquierda del nivel estirada en la mitad izquierda y la derecha en la mitad derecha, detrás del nivel.
+- Solo se ve donde el nivel está vacío (transparente). Si el mapa no tiene escenario más allá de sus bordes, se ve el borde repetido, no escenario nuevo.
+
+## Ventana de objetos y terreno en ultrawide
+- `AppMain.ObjInit`: `clip_lcd_size[0]` usa el ancho real de render (`RENDER_W`) si es mayor que 480. La ventana de
+  recorte (`ObjViewOutCheck`) y la creación de eventos de terreno y objetos (`GmEveMgrCreateEventLcd`) usaban solo 480 px,
+  así que las colinas y objetos de los laterales no se creaban ni dibujaban.
+- En pantallas de 480 px no cambia nada.
+- Pendiente: probar en el teléfono; si aparecen objetos fuera del mapa o hay errores de recorte en los bordes, es el siguiente punto a revisar.

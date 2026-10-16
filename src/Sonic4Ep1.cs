@@ -483,8 +483,10 @@ public class Sonic4Ep1 : Game
         if (gameTarget != null)
         {
             // Fondo difuminado: el frame reducido y estirado cubre los laterales sin tocar el juego.
+            // Fondo gris debajo: las zonas sin nivel (transparentes) no se vuelven negras en el difuminado.
             GraphicsDevice.SetRenderTarget(blurTarget);
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.LinearClamp, null, null);
+            GraphicsDevice.Clear(new Color(90, 90, 90));
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, null, null);
             spriteBatch.Draw(gameTarget, blurTarget.Bounds, Color.White);
             spriteBatch.End();
             GraphicsDevice.SetRenderTarget(null);
@@ -536,6 +538,19 @@ public class Sonic4Ep1 : Game
             // AlphaBlend: las zonas sin nivel son transparentes y dejan ver el fondo de los laterales.
             SamplerState gameSampler = (softFilter || !IsIntegerScale()) ? SamplerState.LinearClamp : SamplerState.PointClamp;
             Texture2D gameTex = softFilter && softTarget != null ? (Texture2D)softTarget : gameTarget;
+            // Sin shader: el borde izquierdo y derecho del nivel se repite hacia los lados, detrás del nivel.
+            // Donde el nivel no tiene escenario (transparente) se ve el borde repetido en vez del fondo borroso.
+            if (!boot && RENDER_W > GAME_W && gameTarget != null)
+            {
+                Rectangle gr = GetGameRect();
+                int half = gr.Width / 2;
+                Rectangle leftSrc = new Rectangle(1, 0, 1, gameTarget.Height);
+                Rectangle rightSrc = new Rectangle(gameTarget.Width - 2, 0, 1, gameTarget.Height);
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, null, null);
+                spriteBatch.Draw(gameTarget, new Rectangle(gr.X, gr.Y, half, gr.Height), leftSrc, Color.White);
+                spriteBatch.Draw(gameTarget, new Rectangle(gr.X + half, gr.Y, gr.Width - half, gr.Height), rightSrc, Color.White);
+                spriteBatch.End();
+            }
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, gameSampler, null, null);
             spriteBatch.Draw(gameTex, GetGameRect(), Color.White);
             spriteBatch.End();
@@ -1281,7 +1296,7 @@ public class Sonic4Ep1 : Game
     // Solo afecta a lo que se dibuja del juego; los controles y el toque siguen en el rectángulo base.
     // Zoom solo en niveles: tapa el borde del mapa en ultrawide. El HUD se redibuja sin zoom y los controles no cambian.
     // Zoom del escenario en niveles (se mantiene). HUD, pausa y resultados se dibujan en su capa sin zoom.
-    private const float STAGE_ZOOM = 1.4f;
+    private const float STAGE_ZOOM = 1.0f;
     // Alto de la franja de HUD superior (unidades de juego) que se muestra sin zoom.
     private const float HUD_BAND_UNITS = 88f;
 
