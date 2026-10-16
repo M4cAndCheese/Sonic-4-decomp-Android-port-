@@ -414,7 +414,14 @@ public class Sonic4Ep1 : Game
             bool boot = AppMain.IsBootScreenNow();
             // El fondo difuminado usa muestreo lineal (es borroso a propósito); la capa del juego usa el modo elegido.
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.LinearClamp, null, null);
-            spriteBatch.Draw(blurTarget, GraphicsDevice.Viewport.Bounds, (wideView && !boot) ? new Color(110, 110, 110) : Color.White);
+            if (AppMain.IsSonicTeamLogoNow())
+            {
+                spriteBatch.Draw(pixelTex, GraphicsDevice.Viewport.Bounds, Color.White);
+            }
+            else
+            {
+                spriteBatch.Draw(blurTarget, GraphicsDevice.Viewport.Bounds, (wideView && !boot) ? new Color(110, 110, 110) : Color.White);
+            }
             spriteBatch.End();
             // Pantallas de arranque y carga: el contenido de 480 px se extiende a los laterales repitiendo su borde
             // izquierdo y derecho (barra negra/azul de la carga, fondo blanco del logo), sin el fondo difuminado.
@@ -434,27 +441,11 @@ public class Sonic4Ep1 : Game
                 }
             }
             // Escala entera: píxeles nítidos. Escala fraccionaria: muestreo lineal para no dejar bordes en diente de sierra.
-            // AlphaBlend: las zonas sin nivel son transparentes y dejan ver el fondo difuminado de los laterales.
+            // AlphaBlend: las zonas sin nivel son transparentes y dejan ver el fondo de los laterales.
             SamplerState gameSampler = (softFilter || !IsIntegerScale()) ? SamplerState.LinearClamp : SamplerState.PointClamp;
             Texture2D gameTex = softFilter && softTarget != null ? (Texture2D)softTarget : gameTarget;
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, gameSampler, null, null);
-            if (AppMain.IsStageTouchActive() && STAGE_ZOOM != 1f)
-            {
-                // Zoom del escenario anclado debajo de la franja del HUD: la franja se dibuja sin zoom (su posición no cambia)
-                // y el escenario de abajo se amplía desde su borde superior, así no queda una línea en el corte.
-                Rectangle b = GetBaseRect();
-                int bandSrc = (int)Math.Round(HUD_BAND_UNITS * RENDER_SCALE);
-                int bandDst = (int)Math.Round(HUD_BAND_UNITS * b.Height / (float)GAME_H);
-                int zw = (int)Math.Round(b.Width * STAGE_ZOOM);
-                int zx = b.X + (b.Width - zw) / 2;
-                int bodyH = (int)Math.Round((b.Height - bandDst) * STAGE_ZOOM);
-                spriteBatch.Draw(gameTex, new Rectangle(b.X, b.Y, b.Width, bandDst), new Rectangle(0, 0, gameTex.Width, bandSrc), Color.White);
-                spriteBatch.Draw(gameTex, new Rectangle(zx, b.Y + bandDst, zw, bodyH), new Rectangle(0, bandSrc, gameTex.Width, gameTex.Height - bandSrc), Color.White);
-            }
-            else
-            {
-                spriteBatch.Draw(gameTex, GetGameRect(), Color.White);
-            }
+            spriteBatch.Draw(gameTex, GetGameRect(), Color.White);
             spriteBatch.End();
             // En fases especiales no hay controles en pantalla: se juega moviendo el celular.
             if (!boot && !AppMain.IsSpecialStageNow())
@@ -977,8 +968,7 @@ public class Sonic4Ep1 : Game
     // Zoom del escenario en niveles: oculta los bordes que el nivel no cubre en ultrawide.
     // Solo afecta a lo que se dibuja del juego; los controles y el toque siguen en el rectángulo base.
     // Zoom solo en niveles: tapa el borde del mapa en ultrawide. El HUD se redibuja sin zoom y los controles no cambian.
-    // Sin zoom: el zoom agrandaba resultados, carga y fases especiales, y el corte del HUD dejaba una línea.
-    private const float STAGE_ZOOM = 1f;
+    private const float STAGE_ZOOM = 1.4f;
     // Alto de la franja de HUD superior (unidades de juego) que se muestra sin zoom.
     private const float HUD_BAND_UNITS = 88f;
 
@@ -998,7 +988,8 @@ public class Sonic4Ep1 : Game
     public Rectangle GetGameRect()
     {
         Rectangle b = GetBaseRect();
-        float z = AppMain.IsStageTouchActive() ? STAGE_ZOOM : 1f;
+        // Sin zoom en pantallas de arranque y carga: ahí el contenido se extiende a los laterales sin estirarse.
+        float z = (AppMain.IsStageTouchActive() && !AppMain.IsBootScreenNow()) ? STAGE_ZOOM : 1f;
         int w = (int)Math.Round(b.Width * z);
         int h = (int)Math.Round(b.Height * z);
         int x = b.X + (b.Width - w) / 2;

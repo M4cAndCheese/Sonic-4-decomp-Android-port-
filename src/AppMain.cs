@@ -180672,6 +180672,19 @@ public class AppMain
 		}
 	}
 
+	// Logo de Sonic Team (fondo blanco a pantalla completa).
+	public static bool IsSonicTeamLogoNow()
+	{
+		try
+		{
+			return SyGetEvtInfo().cur_evt_id == (short)GSE_EVT_ID.GSD_EVT_ID_LOGO_SONIC;
+		}
+		catch (Exception)
+		{
+			return false;
+		}
+	}
+
 	// Pantallas de arranque (SEGA, Sonic Team, carga inicial): sin controles y con el fondo a brillo completo.
 	public static bool IsBootScreenNow()
 	{
