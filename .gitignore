@@ -1,0 +1,16 @@
+# Compilaciones locales
+bin/
+obj/
+artifacts/
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+# Archivos de Windows del proyecto original
+Thumbs.db
+
+# Claves de firma: nunca al repo
+*.jks
+*.keystore
+*.p12
