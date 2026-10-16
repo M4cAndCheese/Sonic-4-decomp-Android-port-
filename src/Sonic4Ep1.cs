@@ -141,8 +141,6 @@ public class Sonic4Ep1 : Game
     // Caja editable del HUD (píxeles de juego, a escala 1).
     private const float HUD_BOX_W = 440f;
     private const float HUD_BOX_H = 64f;
-    // Escala del menú del engranaje (sólo el menú, el escenario no cambia).
-    private const float UI_SCALE = 0.7f;
     private int hudDragId = -1;
     private int hudDragMode = -1;   // 0 mover, 1 escalar (esquina)
     private Vector2 hudDragLast;
@@ -815,13 +813,6 @@ public class Sonic4Ep1 : Game
         spriteBatch.End();
     }
 
-    // Toque en coordenadas del juego -> coordenadas lógicas del menú a escala UI_SCALE.
-    private Vector2 ToUi(Vector2 p)
-    {
-        Vector2 c = new Vector2(RENDER_W * 0.5f, GAME_H * 0.5f);
-        return c + (p - c) / UI_SCALE;
-    }
-
     private void DrawControls(Rectangle r)
     {
         if (padSheet == null)
@@ -848,23 +839,10 @@ public class Sonic4Ep1 : Game
             (int)Math.Min(RENDER_W, jumpCenter.X + jumpSize / 2f),
             (int)Math.Min(GAME_H, jumpCenter.Y + jumpSize / 2f));
 
-        // Menú del engranaje: se dibuja más chico (UI_SCALE) y sus toques se llevan a esa misma escala.
-        Matrix drawM = m;
-        List<TouchLocation> menuNew = newTouches;
+        spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied, SamplerState.LinearClamp, null, null, null, m);
         if (menuOpen)
         {
-            float ucx = RENDER_W * 0.5f, ucy = GAME_H * 0.5f;
-            drawM = Matrix.CreateTranslation(-ucx, -ucy, 0f) * Matrix.CreateScale(UI_SCALE, UI_SCALE, 1f) * Matrix.CreateTranslation(ucx, ucy, 0f) * m;
-            menuNew = new List<TouchLocation>();
-            foreach (TouchLocation t in newTouches)
-            {
-                menuNew.Add(new TouchLocation(t.Id, t.State, ToUi(t.Position)));
-            }
-        }
-        spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied, SamplerState.LinearClamp, null, null, null, drawM);
-        if (menuOpen)
-        {
-            HandleMenu(menuNew);
+            HandleMenu(newTouches);
             DrawMenu();
         }
         else if (hudEditing)
@@ -1277,14 +1255,12 @@ public class Sonic4Ep1 : Game
     // Solo afecta a lo que se dibuja del juego; los controles y el toque siguen en el rectángulo base.
     // Zoom solo en niveles: tapa el borde del mapa en ultrawide. El HUD se redibuja sin zoom y los controles no cambian.
     private const float STAGE_ZOOM = 1.4f;
-    // Zoom sólo mientras se juega el nivel (no en título, carga ni resultados). Un único punto de decisión.
-    private float StageZoomNow { get { return (AppMain.IsStageTouchActive() && !AppMain.IsBootScreenNow() && !AppMain.IsResultScreenNow()) ? STAGE_ZOOM : 1f; } }
     // Alto de la franja de HUD superior (unidades de juego) que se muestra sin zoom.
     private const float HUD_BAND_UNITS = 88f;
 
     // Valores del editor de HUD que usa AppMain.AmMakeOrtho2D (unidades de ortho: 2.25 por píxel de juego).
     public float HudUserScale { get { return hudScale; } }
-    public float HudZoomNow { get { return StageZoomNow; } }
+    public float HudZoomNow { get { return (AppMain.IsStageTouchActive() && !AppMain.IsBootScreenNow() && !AppMain.IsResultScreenNow()) ? STAGE_ZOOM : 1f; } }
     public float HudOffsetUnitsX { get { return hudOffX * 2.25f * HUD_X_SIGN; } }
     public float HudOffsetUnitsY { get { return hudOffY * 2.25f * HUD_Y_SIGN; } }
 
@@ -1305,7 +1281,7 @@ public class Sonic4Ep1 : Game
     {
         Rectangle b = GetBaseRect();
         // Sin zoom en pantallas de arranque y carga: ahí el contenido se extiende a los laterales sin estirarse.
-        float z = StageZoomNow;
+        float z = (AppMain.IsStageTouchActive() && !AppMain.IsBootScreenNow() && !AppMain.IsResultScreenNow()) ? STAGE_ZOOM : 1f;
         int w = (int)Math.Round(b.Width * z);
         int h = (int)Math.Round(b.Height * z);
         int x = b.X + (b.Width - w) / 2;
