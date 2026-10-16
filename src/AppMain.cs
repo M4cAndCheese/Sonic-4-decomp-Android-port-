@@ -76133,6 +76133,12 @@ public class AppMain
 
 	private static void _amDrawObject(AMS_COMMAND_HEADER command, uint drawflag)
 	{
+		// Piezas del HUD en 3D/objeto: también van a la capa sin zoom.
+		_amDrawInLayer(command, drawflag, _amDrawObjectCore);
+	}
+
+	private static void _amDrawObjectCore(AMS_COMMAND_HEADER command, uint drawflag)
+	{
 		NNS_MATRIX nNS_MATRIX = amDrawAlloc_NNS_MATRIX();
 		amMatrixPush();
 		AMS_PARAM_DRAW_OBJECT aMS_PARAM_DRAW_OBJECT = (AMS_PARAM_DRAW_OBJECT)command.param;
@@ -76255,6 +76261,12 @@ public class AppMain
 
 	private static void _amDrawPrimitive3D(AMS_COMMAND_HEADER command, uint drawflag)
 	{
+		// Piezas del HUD en 3D/objeto: también van a la capa sin zoom.
+		_amDrawInLayer(command, drawflag, _amDrawPrimitive3DCore);
+	}
+
+	private static void _amDrawPrimitive3DCore(AMS_COMMAND_HEADER command, uint drawflag)
+	{
 		AMS_PARAM_DRAW_PRIMITIVE aMS_PARAM_DRAW_PRIMITIVE = (AMS_PARAM_DRAW_PRIMITIVE)command.param;
 		if (aMS_PARAM_DRAW_PRIMITIVE.texlist != null && aMS_PARAM_DRAW_PRIMITIVE.texId != -1)
 		{
@@ -76291,6 +76303,12 @@ public class AppMain
 
 	private static void _amDrawSortObject(AMS_COMMAND_HEADER command, uint drawflag)
 	{
+		// Piezas del HUD en 3D/objeto: también van a la capa sin zoom.
+		_amDrawInLayer(command, drawflag, _amDrawSortObjectCore);
+	}
+
+	private static void _amDrawSortObjectCore(AMS_COMMAND_HEADER command, uint drawflag)
+	{
 		mppAssertNotImpl();
 	}
 
@@ -76300,6 +76318,12 @@ public class AppMain
 	}
 
 	private static void _amDrawSortPrimitive3D(AMS_COMMAND_HEADER command, uint drawflag)
+	{
+		// Piezas del HUD en 3D/objeto: también van a la capa sin zoom.
+		_amDrawInLayer(command, drawflag, _amDrawSortPrimitive3DCore);
+	}
+
+	private static void _amDrawSortPrimitive3DCore(AMS_COMMAND_HEADER command, uint drawflag)
 	{
 		NNS_MATRIX amDrawSortPrimitive3D_base_mtx = _amDrawSortPrimitive3D_base_mtx;
 		AMS_PARAM_DRAW_PRIMITIVE aMS_PARAM_DRAW_PRIMITIVE = (AMS_PARAM_DRAW_PRIMITIVE)command.param;
@@ -76326,6 +76350,8 @@ public class AppMain
 	}
 
 	// Las piezas del HUD y del menú de pausa se dibujan en su capa (sin zoom del nivel).
+	private static bool amInLayerPass;
+
 	private static void _amDrawInLayer(AMS_COMMAND_HEADER command, uint drawflag, _am_draw_command_delegate draw)
 	{
 		Sonic4Ep1 inst = Sonic4Ep1.pInstance;
@@ -76334,6 +76360,13 @@ public class AppMain
 			draw(command, drawflag);
 			return;
 		}
+		// Si ya estamos dentro de una pasada de capa, no se cambia el destino otra vez (evita quedarse en la capa).
+		if (amInLayerPass)
+		{
+			draw(command, drawflag);
+			return;
+		}
+		amInLayerPass = true;
 		inst.BeginHudPass();
 		try
 		{
@@ -76342,6 +76375,7 @@ public class AppMain
 		finally
 		{
 			inst.EndHudPass();
+			amInLayerPass = false;
 		}
 	}
 
