@@ -97690,14 +97690,24 @@ public class AppMain
 			if ((gMS_FIX_MGR_WORK.flag & 2) == 0)
 			{
 				// El HUD se dibuja en su propia capa, sin el zoom del escenario.
+				// Si el dibujo del HUD falla, la capa siempre se devuelve al escenario (evita pantalla negra).
 				if (Sonic4Ep1.pInstance != null)
 				{
 					Sonic4Ep1.pInstance.BeginHudPass();
 				}
-				ObjDrawActionSummary(obj_work);
-				if (Sonic4Ep1.pInstance != null)
+				try
 				{
-					Sonic4Ep1.pInstance.EndHudPass();
+					ObjDrawActionSummary(obj_work);
+				}
+				catch (Exception)
+				{
+				}
+				finally
+				{
+					if (Sonic4Ep1.pInstance != null)
+					{
+						Sonic4Ep1.pInstance.EndHudPass();
+					}
 				}
 			}
 		}

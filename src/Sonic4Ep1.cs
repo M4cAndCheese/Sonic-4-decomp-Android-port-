@@ -60,6 +60,10 @@ public class Sonic4Ep1 : Game
     private RenderTarget2D gameTarget;
     // Capa del HUD: se dibuja sin zoom encima del escenario.
     private RenderTarget2D hudTarget;
+    // Interruptor para aislar problemas: false devuelve el HUD al escenario con zoom.
+    public const bool HUD_LAYER_ENABLED = true;
+    // Interruptor: false usa el fondo de carga anterior (desenfocado) en vez de negro.
+    public const bool LOADING_BLACK_BASE = true;
     private RenderTargetBinding[] hudPrevTargets;
     private Viewport hudPrevViewport;
     // Mantiene el fondo de carga unos fotogramas más para que los laterales no parpadeen.
@@ -439,7 +443,7 @@ public class Sonic4Ep1 : Game
             {
                 spriteBatch.Draw(pixelTex, GraphicsDevice.Viewport.Bounds, Color.White);
             }
-            else if (AppMain.IsLoadingScreenNow())
+            else if (LOADING_BLACK_BASE && AppMain.IsLoadingScreenNow())
             {
                 // Carga: base negra fija, así los laterales no cambian entre fotogramas.
                 spriteBatch.Draw(pixelTex, GraphicsDevice.Viewport.Bounds, Color.Black);
@@ -474,7 +478,7 @@ public class Sonic4Ep1 : Game
             spriteBatch.Draw(gameTex, GetGameRect(), Color.White);
             spriteBatch.End();
             // HUD a escala original, encima del escenario (no se estira ni se agranda con el zoom).
-            if (!boot && hudTarget != null)
+            if (!boot && HUD_LAYER_ENABLED && hudTarget != null)
             {
                 spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, gameSampler, null, null);
                 spriteBatch.Draw(hudTarget, GetBaseRect(), Color.White);
@@ -974,7 +978,7 @@ public class Sonic4Ep1 : Game
     // Las piezas del HUD se dibujan en hudTarget mientras estén entre Begin y End.
     public void BeginHudPass()
     {
-        if (hudTarget == null || GraphicsDevice == null)
+        if (!HUD_LAYER_ENABLED || hudTarget == null || GraphicsDevice == null)
         {
             return;
         }
@@ -985,7 +989,7 @@ public class Sonic4Ep1 : Game
 
     public void EndHudPass()
     {
-        if (hudTarget == null || GraphicsDevice == null)
+        if (!HUD_LAYER_ENABLED || hudTarget == null || GraphicsDevice == null)
         {
             return;
         }
