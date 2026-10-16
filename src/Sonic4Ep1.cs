@@ -1290,9 +1290,9 @@ public class Sonic4Ep1 : Game
 
     // Zoom propio del HUD (1 = tamaño de la captura). Solo afecta a la capa del HUD, no al nivel.
     // Se ancla arriba y centrado en horizontal.
-    public const float HUD_ZOOM = 1f;
+    public const float HUD_ZOOM = 0.75f;
     // Diagnóstico: true dibuja un marco en el área del HUD y en el área del escenario.
-    public const bool HUD_DEBUG_FRAMES = true;
+    public const bool HUD_DEBUG_FRAMES = false;
     // HUD, pausa y resultados: tamaño base por defecto, con HUD_ZOOM aplicado. El nivel no se toca.
     private Rectangle HudDrawRect()
     {
