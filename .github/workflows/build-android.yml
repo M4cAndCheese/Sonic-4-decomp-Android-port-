@@ -122,3 +122,20 @@ jobs:
             SHA-256: ${{ steps.verify.outputs.sha }}
           files: artifacts/sonic-4-ep-1.apk
           fail_on_unmatched_files: true
+
+      # Descarga el APK desde la release recién publicada y compara su SHA-256 con el del build.
+      # Si no coincide, el build falla: así no queda publicada una copia dañada.
+      - name: Verificar release publicada
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          URL="https://github.com/${{ github.repository }}/releases/download/build-${{ github.run_number }}/sonic-4-ep-1.apk"
+          for i in 1 2 3 4 5; do
+            if curl -fL --retry 3 -o release.apk "$URL"; then break; fi
+            sleep 10
+          done
+          test -s release.apk
+          unzip -tq release.apk
+          SHA=$(sha256sum release.apk | cut -d' ' -f1)
+          echo "Build:   ${{ steps.verify.outputs.sha }}"
+          echo "Release: $SHA"
+          test "$SHA" = "${{ steps.verify.outputs.sha }}"
