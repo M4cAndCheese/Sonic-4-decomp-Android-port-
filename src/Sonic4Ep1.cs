@@ -1259,11 +1259,12 @@ public class Sonic4Ep1 : Game
     private const float HUD_BAND_UNITS = 88f;
 
     // Valores del editor de HUD que usa AppMain.AmMakeOrtho2D (unidades de ortho: 2.25 por píxel de juego).
-    public float HudUserScale { get { return hudScale; } }
+    // HUD fijo: mismo tamaño y posición que en la pantalla de resultados (el editor ya no lo mueve).
+    public float HudUserScale { get { return 1f; } }
     // Con la capa del HUD activa, el HUD se dibuja sin zoom (zoom 1); la proyección ya no lo compensa.
     public float HudZoomNow { get { return HUD_LAYER_ENABLED ? 1f : ((AppMain.IsLevelZoomNow() && !AppMain.IsBootScreenNow() && !AppMain.IsResultScreenNow()) ? STAGE_ZOOM : 1f); } }
-    public float HudOffsetUnitsX { get { return hudOffX * 2.25f * HUD_X_SIGN; } }
-    public float HudOffsetUnitsY { get { return hudOffY * 2.25f * HUD_Y_SIGN; } }
+    public float HudOffsetUnitsX { get { return 0f; } }
+    public float HudOffsetUnitsY { get { return 0f; } }
 
     // Área base donde se dibuja el juego: escala uniforme que llena el alto y ancho RENDER_W.
     private Rectangle GetBaseRect()
