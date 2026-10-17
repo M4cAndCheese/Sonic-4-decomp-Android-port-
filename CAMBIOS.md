@@ -100,3 +100,9 @@
   La cámara guarda su esquina izquierda como centro - lcd/2, así que antes la ventana quedaba corrida a la derecha:
   se perdían objetos y terreno a la izquierda, y en vertical se cortaba arriba y abajo.
 - Con esto, la ventana de creación de terreno, el recorte de objetos y los límites de la cámara usan la misma medida.
+
+## Ajuste a cualquier pantalla
+- `Sonic4Ep1.GetBaseRect`: la escala cabe completa en ancho y alto (`Math.Min` de ambas). Antes solo usaba la altura,
+  así que en pantallas más estrechas que 15:9 el juego se cortaba a los lados.
+- Pantalla de 1280 x 2772 (landscape 2772 x 1280): RENDER_W = 693, escala 4 exacta, sin cortes ni barras.
+- Pantallas más estrechas o más anchas que el rango soportado (480 a 864 px de ancho de render) muestran el fondo borroso en la zona sobrante, sin cortes.

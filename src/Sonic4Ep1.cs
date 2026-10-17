@@ -1299,7 +1299,9 @@ public class Sonic4Ep1 : Game
     private Rectangle GetBaseRect()
     {
         Viewport vp = GraphicsDevice.Viewport;
-        float scale = vp.Height / (float)GAME_H;
+        // Escala que cabe completa en ancho y alto: nada se corta, y las zonas sobrantes quedan con el fondo borroso.
+        // Con la proporción de la pantalla, RENDER_W * scale coincide con el ancho y no hay barras.
+        float scale = Math.Min(vp.Width / (float)RENDER_W, vp.Height / (float)GAME_H);
         int w = (int)Math.Round(RENDER_W * scale);
         int h = (int)Math.Round(GAME_H * scale);
         int x = (vp.Width - w) / 2;
