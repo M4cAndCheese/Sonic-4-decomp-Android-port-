@@ -22,7 +22,12 @@ namespace System.IO.IsolatedStorage
             return new IsolatedStorageFile(Path.Combine(dir, "savedata"));
         }
 
-        private string Full(string path) => Path.Combine(Root, path);
+        // La ruta de guardado es "/sonic4_ep1.dat". Path.Combine ignora la raíz cuando la segunda ruta empieza por '/',
+        // así que FileExists/DeleteFile miraban en la raíz del sistema y nunca encontraban el archivo real:
+        // la carga siempre fallaba y el borrado no tocaba el guardado. Se quitan las barras iniciales.
+        private static string Relative(string path) => (path ?? "").TrimStart('/', '\\');
+
+        private string Full(string path) => Path.Combine(Root, Relative(path));
 
         public bool FileExists(string path) => File.Exists(Full(path));
 
@@ -47,7 +52,7 @@ namespace System.IO.IsolatedStorage
     public class IsolatedStorageFileStream : FileStream
     {
         public IsolatedStorageFileStream(string path, FileMode mode, FileAccess access, IsolatedStorageFile store)
-            : base(store.Root + Path.DirectorySeparatorChar + path, mode, access)
+            : base(Path.Combine(store.Root, path.TrimStart('/', '\\')), mode, access)
         {
         }
     }
