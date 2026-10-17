@@ -182638,6 +182638,14 @@ public class AppMain
 	{
 		gm_map_draw_size[0] = gm_map_set_draw_size[size, 0];
 		gm_map_draw_size[1] = gm_map_set_draw_size[size, 1];
+		// Ventana del terreno (bloques de 64): la tabla original (6 bloques) cubre 480 px.
+		// En pantalla ultrawide el ancho visible es RENDER_W, así que el terreno de los laterales no se dibujaba.
+		// Se amplía horizontalmente hasta cubrir RENDER_W más un margen de bloques a cada lado.
+		uint needW = (uint)(Sonic4Ep1.RENDER_W / 64 + 4);
+		if (gm_map_draw_size[0] < needW)
+		{
+			gm_map_draw_size[0] = needW;
+		}
 	}
 
 	private static void gmMapDest(MTS_TASK_TCB tcb)
