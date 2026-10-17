@@ -26863,7 +26863,7 @@ public class AppMain
 
 		public uint op;
 
-		public GMS_MAP_PRIM_DRAW_STACK[] stack = New<GMS_MAP_PRIM_DRAW_STACK>(255);
+		public GMS_MAP_PRIM_DRAW_STACK[] stack = New<GMS_MAP_PRIM_DRAW_STACK>(1024);
 	}
 
 	public class GMS_MAP_PRIM_DRAW_TVX_MGR_INDEX
@@ -66216,6 +66216,7 @@ public class AppMain
 
 	private static uint gm_map_draw_margin_adjust;
 
+	private const int GM_MAP_BLOCK_CHECK_W = 64;
 	private static short[,] gm_map_block_check;
 
 	private static int[] gm_map_add_tbl_use_no;
@@ -182638,14 +182639,6 @@ public class AppMain
 	{
 		gm_map_draw_size[0] = gm_map_set_draw_size[size, 0];
 		gm_map_draw_size[1] = gm_map_set_draw_size[size, 1];
-		// Ventana del terreno (bloques de 64): la tabla original (6 bloques) cubre 480 px.
-		// En pantalla ultrawide el ancho visible es RENDER_W, así que el terreno de los laterales no se dibujaba.
-		// Se amplía horizontalmente hasta cubrir RENDER_W más un margen de bloques a cada lado.
-		uint needW = (uint)(Sonic4Ep1.RENDER_W / 64 + 4);
-		if (gm_map_draw_size[0] < needW)
-		{
-			gm_map_draw_size[0] = needW;
-		}
 	}
 
 	private static void gmMapDest(MTS_TASK_TCB tcb)
@@ -182893,9 +182886,9 @@ public class AppMain
 
 	private static void gmMapSetDrawMapRangeTvx(TVX_FILE[] tvxamb, MP_HEADER mp_header, MD_HEADER md_header, float trans_x, float trans_y, float trans_z, int block_left, int block_right, int block_top, int block_bottom, MP_BLOCK _mp_block, MD_BLOCK _md_block)
 	{
-		for (int i = 0; i < 24; i++)
+		for (int i = 0; i < gm_map_block_check.GetLength(0); i++)
 		{
-			for (int j = 0; j < 24; j++)
+			for (int j = 0; j < gm_map_block_check.GetLength(1); j++)
 			{
 				gm_map_block_check[i, j] = -1;
 			}
@@ -182942,7 +182935,7 @@ public class AppMain
 					int num7 = AoTvxGetTextureId(file, num6);
 					for (int m = 0; m < 16; m++)
 					{
-						if (array[m].tex_id == -1 || array[m].tex_id == num7)
+						if ((array[m].tex_id == -1 || array[m].tex_id == num7) && array[m].stack_num < array[m].stack.Length)
 						{
 							array[m].tex_id = num7;
 							array[m].all_vtx_num += num;
@@ -209045,7 +209038,7 @@ public class AppMain
 		gm_map_prim_draw_work = New<GMS_MAP_PRIM_DRAW_WORK>(16);
 		gm_map_draw_size = new uint[2];
 		gm_map_draw_margin_adjust = 0u;
-		gm_map_block_check = new short[24, 24];
+		gm_map_block_check = new short[GM_MAP_BLOCK_CHECK_W, 24];
 		gm_map_add_tbl_use_no = new int[6] { 2, 3, 3, 4, 2, 2 };
 		gm_map_use_prim_mtx = New<NNS_MATRIX>(16);
 		gm_map_addmap_camera_tbl = new int[5] { 2, 0, 3, 4, 5 };
